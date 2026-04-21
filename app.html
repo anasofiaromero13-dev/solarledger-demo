@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarLedger — Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#060D1F;--navy2:#0B1428;--navy3:#111E35;--navy4:#162240;
+  --blue:#1565C7;--blue-mid:#1976D2;--blue-light:#E3F0FF;--blue-pale:#F0F7FF;
+  --teal:#00897B;--teal-bg:#E0F2F1;
+  --amber:#E65100;--amber-bg:#FFF3E0;
+  --red:#C62828;--red-bg:#FFEBEE;
+  --green:#2E7D32;--green-bg:#E8F5E9;
+  --line:#1E2D45;--line-light:#E8EFF8;
+  --text:#0D1B2E;--text2:#4A5568;--text3:#8C9AB0;
+  --surface:#F7FAFD;--white:#FFFFFF;
+  --mono:'IBM Plex Mono',monospace;
+  --serif:'Instrument Serif',serif;
+  --sans:'DM Sans',sans-serif;
+  --r:8px;--r-lg:12px;
+}
+html,body{height:100%;font-family:var(--sans);background:var(--navy);color:var(--text)}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:240px;flex-shrink:0;background:var(--navy);display:flex;flex-direction:column;border-right:1px solid var(--line)}
+.brand{padding:18px 20px 16px;border-bottom:1px solid var(--line)}
+.brand-logo{font-family:var(--serif);font-size:22px;color:#fff;letter-spacing:-0.01em}
+.brand-logo em{font-style:italic;color:#4A9EF0}
+.brand-sub{font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+
+/* DEAL SELECTOR */
+.deal-selector{margin:10px 12px 4px;position:relative}
+.deal-selector-btn{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);padding:10px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .15s}
+.deal-selector-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15)}
+.deal-info{text-align:left}
+.deal-label{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+.deal-name{font-size:12px;color:rgba(255,255,255,.85);font-weight:500}
+.deal-meta{font-size:10px;color:rgba(255,255,255,.35);margin-top:1px}
+.deal-chevron{color:rgba(255,255,255,.3);font-size:10px;transition:transform .2s}
+.deal-chevron.open{transform:rotate(180deg)}
+.deal-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--navy3);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;z-index:100;display:none;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.deal-dropdown.open{display:block}
+.deal-option{padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05);transition:background .12s}
+.deal-option:last-child{border-bottom:none}
+.deal-option:hover,.deal-option.active{background:rgba(74,158,240,.12)}
+.deal-option-name{font-size:12px;color:rgba(255,255,255,.8);font-weight:500;margin-bottom:2px}
+.deal-option-meta{font-size:10px;color:rgba(255,255,255,.3)}
+.deal-option.active .deal-option-name{color:#4A9EF0}
+
+.nav{padding:8px 10px;flex:1;overflow-y:auto}
+.nav-section{font-size:9px;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.08em;padding:12px 10px 4px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;font-size:12.5px;color:rgba(255,255,255,.4);transition:all .15s;border:none;background:none;width:100%;text-align:left;margin-bottom:1px}
+.nav-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.7)}
+.nav-item.active{background:rgba(74,158,240,.14);color:#4A9EF0;font-weight:500}
+.nav-num{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;background:rgba(255,255,255,.07);color:rgba(255,255,255,.25);font-family:var(--mono)}
+.nav-item.active .nav-num{background:rgba(74,158,240,.25);color:#4A9EF0}
+.nav-item.done .nav-num{background:rgba(46,125,50,.25);color:#66BB6A;font-size:9px}
+.nav-item.done{color:rgba(255,255,255,.3)}
+.sidebar-foot{padding:12px 14px;border-top:1px solid var(--line);font-size:10px;color:rgba(255,255,255,.15)}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;background:var(--surface);display:flex;flex-direction:column}
+.topbar{background:var(--white);border-bottom:1px solid var(--line-light);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;flex-shrink:0}
+.topbar-left h1{font-size:14px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.topbar-left p{font-size:11px;color:var(--text3)}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.btn{font-family:var(--sans);font-size:12px;font-weight:500;padding:6px 14px;border-radius:var(--r);cursor:pointer;border:1px solid var(--line-light);background:var(--white);color:var(--text2);transition:all .15s}
+.btn:hover{border-color:#CBD5E1;background:var(--surface)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#1253A4}
+.btn-sm{font-size:11px;padding:4px 10px}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-green:hover{background:#1B5E20}
+.content{padding:24px;flex:1}
+
+/* SCREENS */
+.screen{display:none;animation:fadeUp .2s ease}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.card{background:var(--white);border:1px solid var(--line-light);border-radius:var(--r-lg);padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card-hd{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.card-hd-actions{display:flex;gap:6px;align-items:center}
+.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.metric{background:var(--white);border:1px solid var(--line-light);border-radius:var(--r);padding:13px 15px}
+.metric-label{font-size:10px;color:var(--text3);margin-bottom:5px}
+.metric-value{font-size:22px;font-weight:600;letter-spacing:-.03em;line-height:1;font-family:var(--mono)}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:3px}
+.mv-blue{color:var(--blue)}.mv-green{color:var(--green)}.mv-amber{color:var(--amber)}.mv-red{color:var(--red)}
+
+/* TABLES */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:7px 10px;text-align:left;border-bottom:1px solid var(--line-light);background:var(--surface)}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--line-light);color:var(--text2)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#FAFBFF}
+.tbl td.num{font-family:var(--mono);font-size:11px;text-align:right}
+.tbl td.bold{font-weight:600;color:var(--text)}
+.tbl-total td{background:var(--blue-pale)!important;font-weight:600;color:var(--text)!important;border-top:2px solid var(--blue-light)!important}
+
+/* BADGES */
+.badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;display:inline-block}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-amber{background:var(--amber-bg);color:var(--amber)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-teal{background:var(--teal-bg);color:var(--teal)}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg label{display:block;font-size:11px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.fg input,.fg select{width:100%;font-family:var(--sans);font-size:12px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--line-light);background:var(--white);color:var(--text);transition:border-color .15s;outline:none}
+.fg input:focus,.fg select:focus{border-color:var(--blue)}
+.fg input.blue-input{color:var(--blue);font-family:var(--mono);font-weight:500}
+.fg input.flagged{border-color:#F59E0B;background:#FFFBEB}
+
+/* LAYOUTS */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.col-gap{display:flex;flex-direction:column;gap:16px}
+.sec-hd{margin-bottom:16px}
+.sec-hd h2{font-size:16px;font-weight:600;color:var(--text);letter-spacing:-.02em}
+.sec-hd p{font-size:12px;color:var(--text3);margin-top:2px}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--line-light);border-radius:var(--r-lg);padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--white);margin-bottom:14px}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--blue);background:var(--blue-pale)}
+.upload-icon{width:44px;height:44px;border-radius:10px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.upload-icon svg{width:20px;height:20px;stroke:var(--blue)}
+.upload-title{font-size:14px;font-weight:600;margin-bottom:3px}
+.upload-sub{font-size:12px;color:var(--text3)}
+.file-list{display:flex;flex-wrap:wrap;gap:7px}
+.file-chip{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line-light);border-radius:20px;padding:4px 11px;font-size:11px;color:var(--text2);font-family:var(--mono)}
+.file-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.file-dot-amber{background:var(--amber)}
+
+/* ASSUMPTION TABLE */
+.asmp-table{width:100%;border-collapse:collapse;font-size:12px}
+.asmp-table th{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;text-align:left;border-bottom:1px solid var(--line-light);background:var(--surface)}
+.asmp-table td{padding:6px 10px;border-bottom:1px solid var(--line-light);vertical-align:middle}
+.asmp-table tr:hover td{background:#FAFBFF}
+.asmp-input{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--blue);background:none;border:none;outline:none;width:100%;text-align:right;cursor:pointer;padding:2px 4px;border-radius:4px;transition:background .15s}
+.asmp-input:focus{background:var(--blue-pale);border:1px solid var(--blue)}
+.asmp-input.flagged{color:#B45309;background:#FFFBEB}
+.asmp-formula{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.color-key{display:flex;gap:16px;margin-bottom:12px;font-size:11px;color:var(--text3)}
+.color-key-item{display:flex;align-items:center;gap:5px}
+.ck-blue{color:var(--blue);font-family:var(--mono);font-weight:600}
+.ck-green{color:var(--green);font-family:var(--mono)}
+.ck-yellow{background:#FEF3C7;color:#92400E;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:10px}
+
+/* MODEL TABLE */
+.model-grid{width:100%;overflow-x:auto}
+.model-tbl{width:100%;border-collapse:collapse;font-size:11px;min-width:900px}
+.model-tbl th{font-size:9px;font-weight:600;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.04em;padding:5px 8px;text-align:right;border-bottom:2px solid var(--navy);background:var(--navy);white-space:nowrap}
+.model-tbl th:first-child{text-align:left;min-width:180px}
+.model-tbl td{padding:5px 8px;border-bottom:1px solid var(--line-light);white-space:nowrap}
+.model-tbl td:first-child{font-size:11px;color:var(--text2);font-weight:500}
+.model-tbl td.val{font-family:var(--mono);font-size:11px;text-align:right;color:var(--text2)}
+.model-tbl tr.total td{background:var(--blue-pale)!important;font-weight:700;color:var(--text)!important;border-top:2px solid #93C5FD}
+.model-tbl tr.total td.val{color:var(--blue)!important}
+.model-tbl tr.sub-total td{background:#F1F5F9;font-weight:600;color:var(--text2)}
+.model-tbl tr.section-row td{background:var(--navy3);color:rgba(255,255,255,.6);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:4px 8px}
+.model-tbl tr:hover td:not([class*="section"]){background:#F8FBFF}
+.model-tbl .neg{color:var(--red)!important}
+.model-tbl .pos{color:var(--green)!important}
+
+/* SCENARIO TABS */
+.scen-tabs{display:inline-flex;gap:4px;padding:4px;background:var(--surface);border-radius:var(--r);border:1px solid var(--line-light)}
+.scen-tab{font-family:var(--sans);font-size:11px;font-weight:500;padding:4px 12px;border-radius:6px;cursor:pointer;border:none;background:transparent;color:var(--text3);transition:all .15s}
+.scen-tab.active{background:var(--white);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* CHART */
+.chart-wrap{height:160px;display:flex;align-items:flex-end;gap:2px;padding:15px 0 22px;position:relative;overflow:hidden}
+.chart-bar{flex:1;border-radius:3px 3px 0 0;transition:opacity .2s;cursor:default;position:relative;min-width:6px}
+.chart-bar:hover{opacity:.75}
+.chart-bar-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--text3);white-space:nowrap;font-family:var(--mono)}
+
+/* RETURNS */
+.return-box{background:var(--white);border:1px solid var(--line-light);border-radius:var(--r);padding:14px 16px;text-align:center}
+.return-label{font-size:10px;color:var(--text3);margin-bottom:5px}
+.return-val{font-size:22px;font-weight:600;letter-spacing:-.03em;font-family:var(--mono)}
+
+/* ANALYST CHAT */
+.chat-panel{display:flex;flex-direction:column;height:420px;background:var(--white);border:1px solid var(--line-light);border-radius:var(--r-lg)}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{display:flex;gap:8px;align-items:flex-start;animation:fadeUp .2s ease}
+.msg-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.msg-avatar.user{background:var(--blue-light);color:var(--blue)}
+.msg-avatar.ai{background:var(--navy);color:#4A9EF0}
+.msg-bubble{background:var(--surface);border:1px solid var(--line-light);border-radius:10px;border-top-left-radius:2px;padding:9px 12px;font-size:12px;color:var(--text);line-height:1.55;max-width:88%}
+.msg.user .msg-bubble{background:var(--blue-pale);border-color:#C7DFF7;margin-left:auto}
+.msg.user{flex-direction:row-reverse}
+.msg-change{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11px}
+.change-from{color:var(--red);text-decoration:line-through;font-family:var(--mono)}
+.change-to{color:var(--green);font-family:var(--mono);font-weight:600}
+.change-arrow{color:var(--text3)}
+.chat-input-area{padding:12px;border-top:1px solid var(--line-light);display:flex;gap:8px}
+.chat-input{flex:1;font-family:var(--sans);font-size:12px;padding:8px 12px;border-radius:var(--r);border:1px solid var(--line-light);outline:none;transition:border-color .15s;resize:none;height:36px}
+.chat-input:focus{border-color:var(--blue)}
+.chat-suggestions{padding:8px 12px 0;display:flex;gap:6px;flex-wrap:wrap}
+.suggestion{font-size:10px;padding:3px 9px;border-radius:20px;border:1px solid var(--line-light);background:var(--surface);color:var(--text3);cursor:pointer;transition:all .15s;white-space:nowrap}
+.suggestion:hover{background:var(--blue-pale);border-color:#93C5FD;color:var(--blue)}
+
+/* RISK */
+.risk-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-light)}
+.risk-item:last-child{border-bottom:none}
+.risk-sev{flex-shrink:0;padding-top:1px}
+.risk-body{flex:1}
+.risk-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.risk-desc{font-size:11px;color:var(--text3);line-height:1.55}
+.risk-impact{font-size:10px;font-family:var(--mono);font-weight:600;margin-top:4px}
+.risk-impact.high{color:var(--red)}.risk-impact.med{color:var(--amber)}
+.risk-action{font-size:10px;color:var(--teal);margin-top:2px}
+
+/* MEMO */
+.memo-score{display:flex;align-items:center;gap:16px;padding:14px 16px;background:var(--blue-pale);border:1px solid #C7DFF7;border-radius:var(--r);margin-bottom:16px}
+.score-ring{width:64px;height:64px;border-radius:50%;border:3px solid var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.score-n{font-size:20px;font-weight:700;color:var(--blue);font-family:var(--mono);line-height:1}
+.score-d{font-size:9px;color:var(--text3)}
+.score-txt h3{font-size:14px;font-weight:600;color:var(--text)}
+.score-txt p{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.5}
+.memo-block{padding:12px 0;border-bottom:1px solid var(--line-light)}
+.memo-block:last-child{border-bottom:none}
+.memo-lbl{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.memo-txt{font-size:12px;color:var(--text);line-height:1.65}
+.fin-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line-light);font-size:12px}
+.fin-row:last-child{border-bottom:none}
+.fin-lbl{color:var(--text3)}
+.fin-val{font-family:var(--mono);font-weight:600;color:var(--text)}
+.fin-val.pos{color:var(--green)}.fin-val.warn{color:var(--amber)}
+
+/* AUDIT */
+.audit-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-light);font-size:11px}
+.audit-item:last-child{border-bottom:none}
+.audit-ts{font-family:var(--mono);font-size:10px;color:var(--text3);white-space:nowrap;min-width:80px}
+.audit-field{font-weight:600;color:var(--text)}
+.audit-from{color:var(--red);text-decoration:line-through;font-family:var(--mono)}
+.audit-to{color:var(--green);font-family:var(--mono);font-weight:600}
+
+/* ACTIONS */
+.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line-light)}
+
+/* PORTFOLIO OVERVIEW */
+.portfolio-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.portfolio-card{background:var(--white);border:1px solid var(--line-light);border-radius:var(--r-lg);padding:16px 18px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.portfolio-card:hover{border-color:var(--blue);box-shadow:0 4px 12px rgba(21,101,199,.1)}
+.portfolio-card.active-deal{border-color:var(--blue);background:var(--blue-pale)}
+.portfolio-card-type{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.portfolio-card-name{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.01em;margin-bottom:3px}
+.portfolio-card-meta{font-size:11px;color:var(--text3);margin-bottom:10px}
+.portfolio-card-metrics{display:flex;gap:16px}
+.pcm-item{flex:1}
+.pcm-label{font-size:9px;color:var(--text3);margin-bottom:2px}
+.pcm-value{font-size:14px;font-weight:600;font-family:var(--mono);color:var(--text)}
+.portfolio-card-badge{position:absolute;top:12px;right:12px}
+.deal-status-bar{display:flex;gap:6px;margin-bottom:20px;padding:10px 14px;background:var(--white);border:1px solid var(--line-light);border-radius:var(--r);font-size:11px;color:var(--text3);align-items:center}
+.deal-status-bar strong{color:var(--text)}
+
+/* SCROLLBAR */
+.main::-webkit-scrollbar{width:5px}
+.main::-webkit-scrollbar-thumb{background:var(--line-light);border-radius:3px}
+
+/* ── USER HEADER BAR ── */
+.user-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--line);flex-shrink:0}
+.user-firm{font-size:10px;color:rgba(255,255,255,.25);font-weight:500;letter-spacing:.04em}
+.user-info{display:flex;align-items:center;gap:8px}
+.user-avatar{width:24px;height:24px;border-radius:50%;background:rgba(74,158,240,.2);color:#4A9EF0;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.user-name{font-size:11px;color:rgba(255,255,255,.4)}
+.user-logout{font-size:10px;color:rgba(255,255,255,.2);cursor:pointer;border:none;background:none;padding:3px 7px;border-radius:4px;transition:all .15s;font-family:var(--sans)}
+.user-logout:hover{color:rgba(255,255,255,.5);background:rgba(255,255,255,.05)}
+
+/* ── DASHBOARD ── */
+.dash-header{margin-bottom:24px}
+.dash-header h2{font-size:18px;font-weight:600;color:var(--text);letter-spacing:-0.02em}
+.dash-header p{font-size:12px;color:var(--text3);margin-top:3px}
+.dash-greeting{font-size:22px;font-weight:600;color:var(--text);letter-spacing:-0.02em;margin-bottom:4px}
+.dash-date{font-size:12px;color:var(--text3);margin-bottom:24px}
+
+/* production widget */
+.production-widget{background:var(--white);border:1px solid var(--line-light);border-radius:var(--r-lg);overflow:hidden;margin-bottom:18px}
+.pw-header{padding:14px 18px;background:var(--navy);display:flex;align-items:center;justify-content:space-between}
+.pw-title{font-size:12px;font-weight:600;color:rgba(255,255,255,.85)}
+.pw-live{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4)}
+.pw-live-dot{width:6px;height:6px;border-radius:50%;background:#43A047;animation:pulse2 2s infinite}
+@keyframes pulse2{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(67,160,71,.4)}50%{opacity:.8;box-shadow:0 0 0 4px rgba(67,160,71,0)}}
+.pw-body{padding:16px 18px}
+.pw-sites{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.pw-site{background:var(--surface);border:1px solid var(--line-light);border-radius:var(--r);padding:12px 14px}
+.pw-site-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pw-site-name{font-size:11px;font-weight:600;color:var(--text)}
+.pw-site-status{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--green)}
+.pw-site-dot{width:5px;height:5px;border-radius:50%;background:var(--green)}
+.pw-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pw-metric{text-align:center}
+.pw-metric-val{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);letter-spacing:-0.02em}
+.pw-metric-lbl{font-size:9px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.pw-metric-delta{font-size:9px;margin-top:1px;font-family:var(--mono)}
+.pw-metric-delta.pos{color:var(--green)}
+.pw-metric-delta.neg{color:var(--red)}
+
+/* pending connection card */
+.pw-pending{background:var(--surface);border:1px solid var(--line-light);border-radius:var(--r);padding:12px 14px;display:flex;align-items:flex-start;gap:10px}
+.pw-pending-icon{width:28px;height:28px;border-radius:6px;background:rgba(21,101,199,.08);border:1px solid rgba(21,101,199,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--blue);font-size:13px}
+.pw-pending-body{flex:1}
+.pw-pending-title{font-size:11px;font-weight:600;color:var(--text);margin-bottom:3px}
+.pw-pending-desc{font-size:10px;color:var(--text3);line-height:1.55}
+.pw-pending-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:20px;background:var(--blue-light);color:var(--blue);font-weight:600}
+
+/* mini bar chart in production widget */
+.pw-chart{display:flex;align-items:flex-end;gap:3px;height:48px;padding-top:4px;margin-top:12px}
+.pw-bar{flex:1;border-radius:2px 2px 0 0;min-height:3px;transition:opacity .2s}
+.pw-bar:hover{opacity:.75}
+.pw-bar-lbl{font-size:8px;color:var(--text3);text-align:center;margin-top:3px;font-family:var(--mono)}
+.pw-chart-wrap{flex:1}
+
+/* NOTIFICATION */
+.notif{position:fixed;bottom:20px;right:20px;background:var(--navy3);color:#fff;padding:10px 16px;border-radius:var(--r);font-size:12px;border:1px solid var(--line);z-index:1000;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
+.notif.show{opacity:1;transform:translateY(0)}
+
+/* Sunridge specific */
+.bsu-site-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line-light);font-size:11px}
+.bsu-site-row:last-child{border-bottom:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">Solar<em>Ledger</em></div>
+    <div class="brand-sub">M&A Due Diligence Platform</div>
+  </div>
+  
+  <div class="deal-selector">
+    <button class="deal-selector-btn" onclick="toggleDealDropdown()">
+      <div class="deal-info">
+        <div class="deal-label">Active Deal</div>
+        <div class="deal-name" id="sidebar-deal-name">Apex Solar Portfolio</div>
+        <div class="deal-meta" id="sidebar-deal-meta">82 MWdc · NC · $110M</div>
+      </div>
+      <span class="deal-chevron" id="deal-chevron">▼</span>
+    </button>
+    <div class="deal-dropdown" id="deal-dropdown">
+      <div class="deal-option active" onclick="switchDeal('apex',this)">
+        <div class="deal-option-name">Apex Solar Portfolio</div>
+        <div class="deal-option-meta">82 MWdc · Southeast Utility · SERC · Utility Solar</div>
+      </div>
+      <div class="deal-option" onclick="switchDeal('clearwater',this)">
+        <div class="deal-option-name">Clearwater Solar</div>
+        <div class="deal-option-meta">~30 MWdc · ISO-NE · Operating Solar</div>
+      </div>
+      <div class="deal-option" onclick="switchDeal('bess',this)">
+        <div class="deal-option-name">Project Genesis (DG BESS)</div>
+        <div class="deal-option-meta">BESS · New York · 4-Site Portfolio</div>
+      </div>
+      <div class="deal-option" onclick="switchDeal('sunridge',this)">
+        <div class="deal-option-name">Sunridge C&I Portfolio</div>
+        <div class="deal-option-meta">~20 MWdc · California · 27-Site C&I</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="user-bar">
+    <span class="user-firm" id="sb-firm">Arcadian Infrastructure Partners</span>
+    <div class="user-info">
+      <div class="user-avatar" id="sb-avatar">DU</div>
+      <span class="user-name" id="sb-name">Demo User</span>
+      <button class="user-logout" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Overview</div>
+    <button class="nav-item" onclick="go('dashboard',this)"><span class="nav-num" style="font-size:9px">⌂</span>Dashboard</button>
+    <div class="nav-section">Workflow</div>
+    <button class="nav-item active" onclick="go('upload',this)"><span class="nav-num">1</span>Upload Data Room</button>
+    <button class="nav-item" onclick="go('assumptions',this)"><span class="nav-num">2</span>Review Assumptions</button>
+    <button class="nav-item" onclick="go('model',this)"><span class="nav-num">3</span>Financial Model</button>
+    <button class="nav-item" onclick="go('engineering',this)"><span class="nav-num">4</span>Engineering Review</button>
+    <button class="nav-item" onclick="go('chat',this)"><span class="nav-num">5</span>Analyst Chat</button>
+    <button class="nav-item" onclick="go('memo',this)"><span class="nav-num">6</span>Investment Memo</button>
+    <div class="nav-section">Portfolio</div>
+    <button class="nav-item" onclick="go('portfolio',this)"><span class="nav-num" style="font-size:9px">◈</span>All Deals</button>
+  </nav>
+  <div class="sidebar-foot">SolarLedger v2.0 · April 2026</div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1 id="top-title">Upload Data Room</h1>
+      <p id="top-sub">Step 1 of 6 — Add all deal documents to begin AI extraction</p>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-sm" onclick="exportExcel()">⬇ Export Excel</button>
+      <button class="btn btn-sm">Save Draft</button>
+      <button class="btn btn-primary btn-sm" id="main-cta" onclick="handleCTA()">Run AI Analysis →</button>
+    </div>
+  </div>
+  <div class="content">
+
+  <!-- SCREEN: DASHBOARD -->
+  <div class="screen" id="s-dashboard">
+    <div class="dash-greeting" id="dash-greeting">Good morning, Demo User.</div>
+    <div class="dash-date" id="dash-date">Monday, April 20, 2026 · Arcadian Infrastructure Partners</div>
+
+    <!-- Portfolio KPIs -->
+    <div class="metrics" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px">
+      <div class="metric"><div class="metric-label">Active Deals</div><div class="metric-value mv-blue">4</div><div class="metric-sub">Under analysis</div></div>
+      <div class="metric"><div class="metric-label">Total Capacity</div><div class="metric-value">~155 MW</div><div class="metric-sub">Solar + BESS</div></div>
+      <div class="metric"><div class="metric-label">Portfolio IRR</div><div class="metric-value mv-green">13.8%</div><div class="metric-sub">Blended pre-tax</div></div>
+      <div class="metric"><div class="metric-label">Total CapEx</div><div class="metric-value mv-amber">~$215M</div><div class="metric-sub">Across pipeline</div></div>
+      <div class="metric"><div class="metric-label">Live Monitoring</div><div class="metric-value" style="font-size:16px">2 Assets</div><div class="metric-sub" style="color:var(--green)">● Connected</div></div>
+    </div>
+
+    <!-- Production + Deals side by side -->
+    <div class="two-col mb16" style="grid-template-columns:1fr 1.1fr">
+
+      <!-- Live Production Widget -->
+      <div class="production-widget">
+        <div class="pw-header">
+          <span class="pw-title">Live Production Monitoring</span>
+          <span class="pw-live"><span class="pw-live-dot"></span>SolarEdge API · Updated <span id="pw-timestamp">just now</span></span>
+        </div>
+        <div class="pw-body">
+          <div class="pw-sites">
+
+            <!-- Sunridge C&I -->
+            <div class="pw-site">
+              <div class="pw-site-header">
+                <span class="pw-site-name">Sunridge C&I Portfolio</span>
+                <span class="pw-site-status"><span class="pw-site-dot"></span>Online</span>
+              </div>
+              <div class="pw-metrics">
+                <div class="pw-metric">
+                  <div class="pw-metric-val">18.4</div>
+                  <div class="pw-metric-lbl">MWh today</div>
+                  <div class="pw-metric-delta pos">+2.3%</div>
+                </div>
+                <div class="pw-metric">
+                  <div class="pw-metric-val">98.7%</div>
+                  <div class="pw-metric-lbl">Availability</div>
+                  <div class="pw-metric-delta pos">vs 98.0% SLA</div>
+                </div>
+                <div class="pw-metric">
+                  <div class="pw-metric-val">+2.1%</div>
+                  <div class="pw-metric-lbl">vs P50 YTD</div>
+                  <div class="pw-metric-delta pos">Outperforming</div>
+                </div>
+              </div>
+              <!-- mini chart -->
+              <div class="pw-chart-wrap">
+                <div class="pw-chart" id="chart-sunridge"></div>
+              </div>
+            </div>
+
+            <!-- Clearwater Solar -->
+            <div class="pw-site">
+              <div class="pw-site-header">
+                <span class="pw-site-name">Clearwater Solar</span>
+                <span class="pw-site-status"><span class="pw-site-dot"></span>Online</span>
+              </div>
+              <div class="pw-metrics">
+                <div class="pw-metric">
+                  <div class="pw-metric-val">24.1</div>
+                  <div class="pw-metric-lbl">MWh today</div>
+                  <div class="pw-metric-delta pos">+1.8%</div>
+                </div>
+                <div class="pw-metric">
+                  <div class="pw-metric-val">98.5%</div>
+                  <div class="pw-metric-lbl">Availability</div>
+                  <div class="pw-metric-delta pos">Above budget</div>
+                </div>
+                <div class="pw-metric">
+                  <div class="pw-metric-val">+2.1%</div>
+                  <div class="pw-metric-lbl">vs P50 YTD</div>
+                  <div class="pw-metric-delta pos">Outperforming</div>
+                </div>
+              </div>
+              <div class="pw-chart-wrap">
+                <div class="pw-chart" id="chart-clearwater"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Development-stage assets disclaimer -->
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div class="pw-pending">
+              <div class="pw-pending-icon">◎</div>
+              <div class="pw-pending-body">
+                <div class="pw-pending-title">Apex Solar Portfolio — Live Data Pending COD</div>
+                <div class="pw-pending-desc">Project is in Late-Stage development with COD targeted Q2 2030. SolarEdge API monitoring will activate automatically upon commercial operation. All financial modeling uses PVsyst P50 estimates until then.</div>
+                <span class="pw-pending-badge">🕐 COD Q2 2030</span>
+              </div>
+            </div>
+            <div class="pw-pending">
+              <div class="pw-pending-icon">◎</div>
+              <div class="pw-pending-body">
+                <div class="pw-pending-title">Project Genesis (DG BESS) — Live Data Pending COD</div>
+                <div class="pw-pending-desc">Mid-Stage development. Final interconnection agreements not yet executed. BESS monitoring via Fluence / BMS API will connect at COD across all 4 NY sites.</div>
+                <span class="pw-pending-badge">🕐 COD TBD — IA Pending</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- All Deals -->
+      <div>
+        <div class="card-hd" style="margin-bottom:12px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Active Deal Pipeline</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+
+          <div class="portfolio-card active-deal" style="background:var(--white);border:1px solid var(--line-light);border-radius:var(--r-lg);padding:14px 16px;cursor:pointer;transition:all .2s" onclick="switchDeal('apex');go('upload',document.querySelectorAll('.nav-item')[2])" onmouseover="this.style.borderColor='#93C5FD';this.style.boxShadow='0 4px 16px rgba(21,96,189,.08)'" onmouseout="this.style.borderColor='var(--line-light)';this.style.boxShadow='none'">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Utility-Scale Solar · SERC</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Apex Solar Portfolio</div>
+              </div>
+              <span class="badge badge-blue">Late-Stage</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--blue)">12.9%</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Lev. IRR</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">82 MW</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Capacity</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">$110M</div><div style="font-size:9px;color:var(--text3);margin-top:2px">CapEx</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--green)">40%</div><div style="font-size:9px;color:var(--text3);margin-top:2px">ITC</div></div>
+            </div>
+          </div>
+
+          <div style="background:var(--white);border:1px solid var(--line-light);border-radius:var(--r-lg);padding:14px 16px;cursor:pointer;transition:all .2s" onclick="switchDeal('clearwater');go('upload',document.querySelectorAll('.nav-item')[2])" onmouseover="this.style.borderColor='#93C5FD';this.style.boxShadow='0 4px 16px rgba(21,96,189,.08)'" onmouseout="this.style.borderColor='var(--line-light)';this.style.boxShadow='none'">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Operating Solar · ISO-NE</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Clearwater Solar</div>
+              </div>
+              <span class="badge badge-green">Operating</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--blue)">15.2%</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Lev. IRR</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">~30 MW</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Capacity</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--green)">+2.1%</div><div style="font-size:9px;color:var(--text3);margin-top:2px">vs P50</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">98.5%</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Avail.</div></div>
+            </div>
+          </div>
+
+          <div style="background:var(--white);border:1px solid var(--line-light);border-radius:var(--r-lg);padding:14px 16px;cursor:pointer;transition:all .2s" onclick="switchDeal('bess');go('upload',document.querySelectorAll('.nav-item')[2])" onmouseover="this.style.borderColor='#FCD34D';this.style.boxShadow='0 4px 16px rgba(230,81,0,.06)'" onmouseout="this.style.borderColor='var(--line-light)';this.style.boxShadow='none'">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">BESS · NY ISO</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Project Genesis (DG BESS)</div>
+              </div>
+              <span class="badge badge-amber">Flagged</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--amber)">TBD</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Lev. IRR</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">4 Sites</div><div style="font-size:9px;color:var(--text3);margin-top:2px">NY/MA</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">~$50M</div><div style="font-size:9px;color:var(--text3);margin-top:2px">CapEx</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--red)">IA ⚠</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Blocker</div></div>
+            </div>
+          </div>
+
+          <div style="background:var(--white);border:1px solid var(--line-light);border-radius:var(--r-lg);padding:14px 16px;cursor:pointer;transition:all .2s" onclick="switchDeal('sunridge');go('upload',document.querySelectorAll('.nav-item')[2])" onmouseover="this.style.borderColor='#6EE7B7';this.style.boxShadow='0 4px 16px rgba(0,137,123,.06)'" onmouseout="this.style.borderColor='var(--line-light)';this.style.boxShadow='none'">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">C&I Solar · California</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Sunridge C&I Portfolio</div>
+              </div>
+              <span class="badge badge-teal">Operating</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--green)">+2.1%</div><div style="font-size:9px;color:var(--text3);margin-top:2px">vs P50</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">27 sites</div><div style="font-size:9px;color:var(--text3);margin-top:2px">CA fleet</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">20 MW</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Capacity</div></div>
+              <div style="text-align:center;padding:6px;background:var(--surface);border-radius:5px"><div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text)">98.7%</div><div style="font-size:9px;color:var(--text3);margin-top:2px">Avail.</div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: UPLOAD -->
+  <div class="screen active" id="s-upload">
+    <div class="sec-hd mb20">
+      <h2 id="upload-title">New Deal Analysis — Apex Solar Portfolio</h2>
+      <p>Upload the full data room. SolarLedger reads every file and extracts structured assumptions automatically. Re-upload modified Excel exports to sync changes.</p>
+    </div>
+    
+    <div class="upload-zone" id="upload-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" style="display:none" multiple accept=".pdf,.xlsx,.xlsm,.csv,.docx" onchange="handleFileInput(event)">
+      <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+      <div class="upload-title">Drop files here or click to browse</div>
+      <div class="upload-sub">PDF, Excel (.xlsx/.xlsm), CSV — Re-upload exported models to sync changes back</div>
+    </div>
+
+    <div class="card mb16" id="files-card">
+      <div class="card-hd">Files Parsed — <span id="files-count">8 of 8 ready</span> <span class="badge badge-green" id="extract-status">AI Extraction Complete</span></div>
+      <div class="file-list" id="file-list"></div>
+    </div>
+    
+    <div class="card mb16">
+      <div class="card-hd">Deal Details</div>
+      <div class="form-grid" id="deal-details-form"></div>
+    </div>
+    
+    <div class="card">
+      <div class="card-hd">AI Extraction Preview</div>
+      <table class="tbl">
+        <thead><tr><th>Document</th><th>Fields Extracted</th><th>Status</th><th>Confidence</th></tr></thead>
+        <tbody id="extraction-preview"></tbody>
+      </table>
+    </div>
+    <div class="actions"><button class="btn btn-primary" onclick="go('assumptions',document.querySelectorAll('.nav-item')[1])">Review Assumptions →</button></div>
+  </div>
+
+  <!-- SCREEN: ASSUMPTIONS -->
+  <div class="screen" id="s-assumptions">
+    <div class="sec-hd mb16">
+      <h2>Review & Override Assumptions</h2>
+      <p>All values extracted from documents. Blue = AI-extracted input. Yellow = flagged for review. Click any value to edit.</p>
+    </div>
+    <div class="color-key">
+      <div class="color-key-item"><span class="ck-blue">1,710</span><span>Hardcode / extracted input</span></div>
+      <div class="color-key-item"><span class="ck-green">→Revenue</span><span>Cross-sheet link</span></div>
+      <div class="color-key-item"><span class="ck-yellow">65.0</span><span>Flagged — review required</span></div>
+    </div>
+    <div id="assumptions-content"></div>
+    <div class="actions">
+      <button class="btn" onclick="go('upload',document.querySelectorAll('.nav-item')[0])">← Back</button>
+      <button class="btn btn-primary" onclick="go('model',document.querySelectorAll('.nav-item')[2])">Build Financial Model →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: FINANCIAL MODEL -->
+  <div class="screen" id="s-model">
+    <div class="sec-hd mb16">
+      <h2>Financial Model — <span id="model-life-title">35</span>-Year Projection</h2>
+      <p>All figures in $'000. Adjust scenario or assumptions in real time.</p>
+    </div>
+    <div class="metrics" id="model-metrics">
+      <div class="metric"><div class="metric-label">Levered IRR (Pre-Tax)</div><div class="metric-value mv-blue" id="m-irr">—</div><div class="metric-sub" id="m-irr-target">Target: 10.0%</div></div>
+      <div class="metric"><div class="metric-label">NPV @ 8%</div><div class="metric-value mv-green" id="m-npv">—</div><div class="metric-sub">$'000</div></div>
+      <div class="metric"><div class="metric-label">Min DSCR</div><div class="metric-value mv-amber" id="m-dscr">—</div><div class="metric-sub">Covenant: 1.25x</div></div>
+      <div class="metric"><div class="metric-label">Payback Period</div><div class="metric-value" id="m-payback">—</div><div class="metric-sub">From COD</div></div>
+    </div>
+    <div class="two-col mb16">
+      <div class="card">
+        <div class="card-hd">Returns by Scenario 
+          <div class="card-hd-actions">
+            <div class="scen-tabs">
+              <button class="scen-tab active" onclick="setScen('base',this)">Base</button>
+              <button class="scen-tab" onclick="setScen('bull',this)">Bull</button>
+              <button class="scen-tab" onclick="setScen('bear',this)">Bear</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-grid-2" id="returns-grid">
+          <div class="return-box"><div class="return-label">Unlevered IRR (Pre-Tax)</div><div class="return-val mv-blue" id="r-unlev-pre">—</div></div>
+          <div class="return-box"><div class="return-label">Unlevered IRR (Post-Tax)</div><div class="return-val" id="r-unlev-post">—</div></div>
+          <div class="return-box"><div class="return-label">Levered IRR (Pre-Tax)</div><div class="return-val mv-blue" id="r-lev-pre">—</div></div>
+          <div class="return-box"><div class="return-label">Levered IRR (Post-Tax)</div><div class="return-val mv-green" id="r-lev-post">—</div></div>
+          <div class="return-box"><div class="return-label">Levered MOIC</div><div class="return-val" id="r-moic">—</div></div>
+          <div class="return-box"><div class="return-label">EBITDA Margin (avg)</div><div class="return-val" id="r-ebitda">—</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Annual Cash Flow ($'000)</div>
+        <div class="chart-wrap" id="cf-chart"></div>
+      </div>
+    </div>
+    <div class="card mb16">
+      <div class="card-hd">Revenue Model — Selected Years ($'000)</div>
+      <div class="model-grid"><table class="model-tbl" id="rev-table"><thead><tr id="rev-thead"></tr></thead><tbody id="rev-tbody"></tbody></table></div>
+    </div>
+    <div class="two-col mb16">
+      <div class="card">
+        <div class="card-hd">OPEX Schedule ($'000)</div>
+        <div class="model-grid"><table class="model-tbl" id="opex-table"><thead><tr id="opex-thead"></tr></thead><tbody id="opex-tbody"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Debt Schedule & DSCR</div>
+        <div class="model-grid"><table class="model-tbl" id="debt-table"><thead><tr id="debt-thead"></tr></thead><tbody id="debt-tbody"></tbody></table></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd">Sources & Uses at COD ($'000)</div>
+      <div class="two-col" id="su-grid"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="go('assumptions',document.querySelectorAll('.nav-item')[1])">← Back</button>
+      <button class="btn btn-green btn-sm" onclick="exportExcel()">⬇ Export Excel Model</button>
+      <button class="btn btn-primary" onclick="go('engineering',document.querySelectorAll('.nav-item')[3])">Engineering Review →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: ENGINEERING -->
+  <div class="screen" id="s-engineering">
+    <div class="sec-hd mb16"><h2>Engineering & Technical Review</h2><p>Automated review based on Owner's Engineer scope.</p></div>
+    <div id="engineering-content"></div>
+    <div class="actions">
+      <button class="btn" onclick="go('model',document.querySelectorAll('.nav-item')[2])">← Back</button>
+      <button class="btn btn-primary" onclick="go('chat',document.querySelectorAll('.nav-item')[4])">Open Analyst Chat →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: ANALYST CHAT -->
+  <div class="screen" id="s-chat">
+    <div class="sec-hd mb16"><h2>Analyst Chat Interface</h2><p>Ask SolarLedger to modify any assumption, run scenarios, or recalculate. All changes are logged.</p></div>
+    <div class="two-col">
+      <div class="col-gap">
+        <div class="chat-panel">
+          <div class="chat-suggestions" id="chat-suggestions"></div>
+          <div class="chat-messages" id="chat-msgs"></div>
+          <div class="chat-input-area">
+            <textarea class="chat-input" id="chat-in" placeholder="e.g. Change merchant price to $70/MWh post-PPA..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+            <button class="btn btn-primary btn-sm" onclick="sendChat()">Send</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd">Audit Trail</div>
+          <div id="audit-trail"><div class="audit-item"><span class="audit-ts">AI · init</span><div><div><span class="audit-field">Model initialized</span> — documents parsed, assumptions extracted</div></div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Live Model State</div>
+        <table class="tbl" id="live-state-tbl"><thead><tr><th>Assumption</th><th>Current Value</th><th>Source</th></tr></thead><tbody id="live-state-body"></tbody></table>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="go('engineering',document.querySelectorAll('.nav-item')[3])">← Back</button>
+      <button class="btn btn-primary" onclick="go('memo',document.querySelectorAll('.nav-item')[5])">Generate Investment Memo →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: MEMO -->
+  <div class="screen" id="s-memo">
+    <div class="sec-hd mb16"><h2 id="memo-title">Investment Memo</h2><p>Auto-generated from final model state. Ready to share with investment committee.</p></div>
+    <div id="memo-content"></div>
+    <div class="actions">
+      <button class="btn" onclick="go('chat',document.querySelectorAll('.nav-item')[4])">← Back</button>
+      <button class="btn btn-green btn-sm" onclick="exportExcel()">⬇ Export Excel Model</button>
+      <button class="btn btn-primary">Share with Committee →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: PORTFOLIO OVERVIEW -->
+  <div class="screen" id="s-portfolio">
+    <div class="sec-hd mb20">
+      <h2>Active Deal Portfolio</h2>
+      <p>All active deal analyses. Click any card to open that deal's model.</p>
+    </div>
+    <div class="metrics" style="grid-template-columns:repeat(4,1fr)">
+      <div class="metric"><div class="metric-label">Total Deals</div><div class="metric-value mv-blue">4</div><div class="metric-sub">Active analyses</div></div>
+      <div class="metric"><div class="metric-label">Total Capacity</div><div class="metric-value">~155 MW</div><div class="metric-sub">Solar + BESS</div></div>
+      <div class="metric"><div class="metric-label">Avg Levered IRR</div><div class="metric-value mv-green">13.8%</div><div class="metric-sub">Pre-tax base case</div></div>
+      <div class="metric"><div class="metric-label">Total CapEx</div><div class="metric-value mv-amber">~$215M</div><div class="metric-sub">Across portfolio</div></div>
+    </div>
+    <div class="portfolio-grid">
+      <div class="portfolio-card active-deal" onclick="switchDeal('apex');go('upload',document.querySelectorAll('.nav-item')[0])">
+        <div class="portfolio-card-badge"><span class="badge badge-green">Active</span></div>
+        <div class="portfolio-card-type">Utility-Scale Solar · NC · Development</div>
+        <div class="portfolio-card-name">Apex Solar Portfolio</div>
+        <div class="portfolio-card-meta">Southeast Utility · 82 MWdc · 4 Sites · COD Q2 2030</div>
+        <div class="portfolio-card-metrics">
+          <div class="pcm-item"><div class="pcm-label">Levered IRR</div><div class="pcm-value mv-blue">12.9%</div></div>
+          <div class="pcm-item"><div class="pcm-label">CapEx</div><div class="pcm-value">$110M</div></div>
+          <div class="pcm-item"><div class="pcm-label">Min DSCR</div><div class="pcm-value">1.62x</div></div>
+          <div class="pcm-item"><div class="pcm-label">ITC</div><div class="pcm-value mv-green">40%</div></div>
+        </div>
+      </div>
+      <div class="portfolio-card" onclick="switchDeal('clearwater');go('upload',document.querySelectorAll('.nav-item')[0])">
+        <div class="portfolio-card-badge"><span class="badge badge-blue">In Review</span></div>
+        <div class="portfolio-card-type">Operating Solar · ISO-NE · Acquisition</div>
+        <div class="portfolio-card-name">Clearwater Solar</div>
+        <div class="portfolio-card-meta">ISO New England · ~30 MWdc · 1 Site · Operating</div>
+        <div class="portfolio-card-metrics">
+          <div class="pcm-item"><div class="pcm-label">Levered IRR</div><div class="pcm-value mv-blue">15.2%</div></div>
+          <div class="pcm-item"><div class="pcm-label">Yield</div><div class="pcm-value">1,906 hrs</div></div>
+          <div class="pcm-item"><div class="pcm-label">Avail.</div><div class="pcm-value">98.0%</div></div>
+          <div class="pcm-item"><div class="pcm-label">Degrad.</div><div class="pcm-value">0.45%</div></div>
+        </div>
+      </div>
+      <div class="portfolio-card" onclick="switchDeal('bess');go('upload',document.querySelectorAll('.nav-item')[0])">
+        <div class="portfolio-card-badge"><span class="badge badge-amber">Flagged</span></div>
+        <div class="portfolio-card-type">BESS · New York · Development</div>
+        <div class="portfolio-card-name">Project Genesis (DG BESS)</div>
+        <div class="portfolio-card-meta">NY ISO · 4 Sites · MA/NY · SOFR+5.50%</div>
+        <div class="portfolio-card-metrics">
+          <div class="pcm-item"><div class="pcm-label">Lev. MOIC</div><div class="pcm-value mv-blue">12.9x</div></div>
+          <div class="pcm-item"><div class="pcm-label">Total CapEx</div><div class="pcm-value">~$50M</div></div>
+          <div class="pcm-item"><div class="pcm-label">ITC</div><div class="pcm-value mv-green">40%</div></div>
+          <div class="pcm-item"><div class="pcm-label">Tenor</div><div class="pcm-value">7 yr</div></div>
+        </div>
+      </div>
+      <div class="portfolio-card" onclick="switchDeal('sunridge');go('upload',document.querySelectorAll('.nav-item')[0])">
+        <div class="portfolio-card-badge"><span class="badge badge-teal">Operating</span></div>
+        <div class="portfolio-card-type">C&I Solar Portfolio · California · Operating</div>
+        <div class="portfolio-card-name">Sunridge C&I Portfolio</div>
+        <div class="portfolio-card-meta">California · 27 Sites · ~20 MWdc · 2023–2062</div>
+        <div class="portfolio-card-metrics">
+          <div class="pcm-item"><div class="pcm-label">Total kW</div><div class="pcm-value mv-blue">20,182</div></div>
+          <div class="pcm-item"><div class="pcm-label">Sites</div><div class="pcm-value">27</div></div>
+          <div class="pcm-item"><div class="pcm-label">Rev (Yr)</div><div class="pcm-value">$9.2M</div></div>
+          <div class="pcm-item"><div class="pcm-label">Life</div><div class="pcm-value">35+ yr</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</main>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ─── DEAL DEFINITIONS ─────────────────────────────────────────────────────────
+const DEALS = {
+  apex: {
+    name: 'Apex Solar Portfolio',
+    meta: '82 MWdc · SERC · $110M',
+    type: 'Utility-Scale Solar · Development',
+    location: 'Southeast Region, NC',
+    gridOp: 'Southeast Utility (SERC)',
+    mwdc: 82, mwac: 42.1, dcac: 1.43,
+    yield: 1710, avail: 0.985, degrad: 0.004,
+    cod: 'Q2 2030', life: 35,
+    ppa: 59, ppaEsc: 0, ppaTenor: 5,
+    merch: 65, merchEsc: 0.015, curtail: 0.02,
+    capex: 110432, loan: 27500, rate: 0.085, tenor: 20,
+    itc: 0.40, fmv: 142545, prefEquity: 17132,
+    irrTarget: 0.10,
+    baseIRR: 0.129, baseNPV: 28102, baseDSCR: 1.62, payback: 11,
+    ebitdaMargin: 0.763,
+    score: 74, scoreLabel: 'Conditional Buy',
+    bidRec: 96250, askingPrice: 110000, dcfValue: 126500,
+    opex: {pvo:479,util:68,para:60,uncov:70,tel:34,ins:321,am:70,at:19,lc:113,inv:0,other:117,lease:582},
+    opexEsc: {pvo:.02,util:0,para:.01,uncov:.02,tel:.02,ins:0,am:.02,at:.02,lc:0,inv:0,other:0,lease:.02},
+    files: [
+      {name:'PVsyst_ApexSolar_P50_Report.pdf',fields:'P50 yield 1,710 kWh/kWp · PR 81.5% · Degradation 0.40%/yr · DC/AC 1.43x',status:'green',conf:97},
+      {name:'Utility_PPA_Agreement.pdf',fields:'$59/MWh · 0% escalation · 2030–2034 · Change-of-control clause flagged',status:'green',conf:94},
+      {name:'Clearwater_EPC_CAPEX_Schedule.xlsx',fields:'Total $110.4M · Modules $34.4M · EPC margin 7.6% · 15-month schedule',status:'green',conf:99},
+      {name:'Interconnection_Agreement_SERC.pdf',fields:'SERC cluster · COD Q2 2030 · Deposit $1.35M · Queue position active',status:'green',conf:91},
+      {name:'Equipment_Specs_Inverters_Modules.pdf',fields:'Safe Harbor status: Confirmed · ITC recapture: None · FAT: Scheduled',status:'green',conf:95},
+      {name:'Debt_Term_Sheet_SOFR.pdf',fields:'$27.5M · SOFR+2.50% · 20yr · DSCR covenant 1.25x · DSRA 6 months',status:'green',conf:98},
+      {name:'Land_Lease_Southeast_Region.pdf',fields:'$582K/yr · 2.0% escalation · 35yr term · Change-of-control: Review',status:'amber',conf:88},
+      {name:'Independent_Engineering_Report.pdf',fields:'P50 validated · Degradation within range · 3 minor findings · No critical issues',status:'green',conf:92},
+    ],
+    chat: [
+      {trigger:/ppa.*(escal|2%)/i,reply:'PPA escalation updated to 2.0%/yr starting Year 3.',changes:[{f:'PPA Escalation',from:'0.0%',to:'2.0%'}]},
+      {trigger:/bear|merchant.*(down|-15%)/i,reply:'Bear case applied. Merchant price -15%. IRR: 12.9% → 10.6%.',changes:[{f:'Scenario',from:'Base',to:'Bear (-15% merchant)'}]},
+      {trigger:/merchant|70/i,reply:'Merchant price updated to $70/MWh. Levered IRR improves to ~14.1%.',changes:[{f:'Merchant Price',from:'$65/MWh',to:'$70/MWh'}]},
+      {trigger:/dscr|interest|9\.5/i,reply:'Interest rate modeled at 9.5%. DSCR drops to 1.41x — still above 1.25x covenant.',changes:[{f:'Interest Rate',from:'SOFR+2.50%',to:'SOFR+3.50%'}]},
+      {trigger:/o.?m|opex.*20/i,reply:'O&M costs +20%. EBITDA margin compresses ~2.1pp. IRR impact: -0.8pp.',changes:[{f:'O&M Base',from:'$479K',to:'$575K (+20%)'}]},
+    ]
+  },
+  clearwater: {
+    name: 'Clearwater Solar',
+    meta: '~30 MWdc · ISO-NE · Operating',
+    type: 'Operating Solar · Acquisition',
+    location: 'New England, USA',
+    gridOp: 'ISO New England',
+    mwdc: 30, mwac: 24, dcac: 1.25,
+    yield: 1906, avail: 0.98, degrad: 0.0045,
+    cod: 'Operating', life: 35,
+    ppa: 0, ppaEsc: 0, ppaTenor: 0,
+    merch: 55, merchEsc: 0.02, curtail: 0.01,
+    capex: 0, loan: 0, rate: 0.07, tenor: 20,
+    itc: 0.30, fmv: 0, prefEquity: 0,
+    irrTarget: 0.12,
+    baseIRR: 0.152, baseNPV: 18400, baseDSCR: 1.85, payback: 9,
+    ebitdaMargin: 0.72,
+    score: 81, scoreLabel: 'Buy',
+    bidRec: null, askingPrice: null, dcfValue: null,
+    opex: {pvo:320,util:40,para:30,uncov:35,tel:20,ins:180,am:45,at:12,lc:0,inv:55,other:60,lease:0},
+    opexEsc: {pvo:.02,util:0,para:.01,uncov:.02,tel:.02,ins:0,am:.02,at:.02,lc:0,inv:0,other:0,lease:0},
+    files: [
+      {name:'Clearwater_Financial_Model_v2026.xlsm',fields:'Scenario Manager · Yield 1,906 hrs/yr · Availability 98% · Degradation 0.45%/yr',status:'green',conf:99},
+      {name:'PVsyst_Clearwater_P50_Report.pdf',fields:'P50 validated · PR benchmark within range · Production history matches',status:'green',conf:96},
+      {name:'PPA_Agreements_ISO-NE.pdf',fields:'Multiple merchant + REC revenue streams · Aurora curves · Capacity market',status:'green',conf:93},
+      {name:'Equipment_Specs_Clearwater.pdf',fields:'Inverter reserve: Yr 7–16 and Yr 25–34 · Uncovered O&M flip: Yr 14',status:'green',conf:95},
+      {name:'Insurance_Policy_Clearwater.pdf',fields:'$57.2K/month · Standard solar policy · Named storm coverage',status:'green',conf:98},
+    ],
+    chat: [
+      {trigger:/yield|production|1906/i,reply:'Yield updated. Annual MWh production recalculated across 35-year model.',changes:[{f:'Yield',from:'1,906 hrs',to:'1,850 hrs (-3%)'}]},
+      {trigger:/inverter|reserve/i,reply:'Inverter reserve schedule confirmed: Year 7–16 and Year 25–34 funding periods.',changes:[{f:'Inverter Reserve',from:'Not funded',to:'Funded Yr7-16,25-34'}]},
+      {trigger:/merchant|rec|price/i,reply:'Revenue curves updated with Aurora consensus pricing. REC and capacity market included.',changes:[{f:'Revenue Model',from:'ATC only',to:'ATC + REC + Capacity'}]},
+    ]
+  },
+  bess: {
+    name: 'Project Genesis (DG BESS)',
+    meta: 'BESS · NY · 4-Site Portfolio',
+    type: 'Battery Energy Storage · Development',
+    location: 'Massachusetts & New York',
+    gridOp: 'ISO-NE / NYISO',
+    mwdc: 0, mwac: 0, dcac: 0,
+    yield: 0, avail: 0.97, degrad: 0.02,
+    cod: '2027–2028', life: 20,
+    ppa: 0, ppaEsc: 0, ppaTenor: 0,
+    merch: 0, merchEsc: 0, curtail: 0,
+    capex: 50000, loan: 19380, rate: 0.115, tenor: 7,
+    itc: 0.40, fmv: 56760, prefEquity: 5622,
+    irrTarget: 0.15,
+    baseIRR: 0.45, baseNPV: 12800, baseDSCR: 1.23, payback: 5,
+    ebitdaMargin: 0.0,
+    score: 68, scoreLabel: 'Conditional — Revenue Risk',
+    bidRec: null, askingPrice: null, dcfValue: null,
+    opex: {pvo:0,util:120,para:0,uncov:0,tel:25,ins:180,am:60,at:15,lc:80,inv:0,other:50,lease:0},
+    opexEsc: {pvo:0,util:.02,para:0,uncov:0,tel:.02,ins:0,am:.02,at:.02,lc:0,inv:0,other:0,lease:0},
+    files: [
+      {name:'DG_BESS_Financial_Model_NY_v1.xlsm',fields:'4 sites · Bracero Pecan · Oxford MA · Turners Falls MA · Leominster MA',status:'green',conf:99},
+      {name:'Battery_Specs_BESS_4Sites.pdf',fields:'Chemistry: LFP · 4hr duration · FMV step-up 20% · COD 2027–2028',status:'green',conf:95},
+      {name:'NYISO_Interconnection_Agreements.pdf',fields:'Revenue: Arbitrage + Ancillary services (FR, RR) · Scheduled revenue TBD',status:'amber',conf:78},
+      {name:'Debt_Term_Sheet_SOFR_550.pdf',fields:'$19.4M total · SOFR+5.50% · 7yr tenor · DSCR 1.25x covenant',status:'green',conf:97},
+    ],
+    chat: [
+      {trigger:/revenue|arbitrage|ancillary/i,reply:'BESS revenue model: Arbitrage + FR/RR ancillary services. Scheduled revenue pending final IA.',changes:[{f:'Revenue Model',from:'TBD',to:'Arbitrage + Ancillary'}]},
+      {trigger:/sofr|rate|interest/i,reply:'Interest rate at SOFR+5.50%. High spread reflects BESS merchant risk. DSCR at 1.23x near covenant.',changes:[{f:'SOFR Spread',from:'+5.50%',to:'+5.50% (confirmed)'}]},
+    ]
+  },
+  sunridge: {
+    name: 'Sunridge C&I Portfolio',
+    meta: '~20 MWdc · California · 27 Sites',
+    type: 'C&I Solar Portfolio · California · Operating',
+    location: 'California (Multiple Counties)',
+    gridOp: 'CAISO (SCE, PG&E, SDG&E)',
+    mwdc: 20.18, mwac: 16.8, dcac: 1.20,
+    yield: 1450, avail: 0.985, degrad: 0.004,
+    cod: '2023–2024 (fully operational)', life: 35,
+    ppa: 0, ppaEsc: 0, ppaTenor: 0,
+    merch: 0, merchEsc: 0, curtail: 0.01,
+    capex: 0, loan: 0, rate: 0.06, tenor: 20,
+    itc: 0.30, fmv: 0, prefEquity: 0,
+    irrTarget: 0.10,
+    baseIRR: 0.118, baseNPV: 14200, baseDSCR: 0, payback: 12,
+    ebitdaMargin: 0.65,
+    score: 86, scoreLabel: 'Strong Buy — Operating',
+    bidRec: null, askingPrice: null, dcfValue: null,
+    opex: {pvo:280,util:30,para:20,uncov:25,tel:15,ins:140,am:35,at:10,lc:0,inv:30,other:40,lease:0},
+    opexEsc: {pvo:.02,util:0,para:.01,uncov:.02,tel:.02,ins:0,am:.02,at:.02,lc:0,inv:0,other:0,lease:0},
+    files: [
+      {name:'Sunridge_Operating_Portfolio_11.03.26.xlsm',fields:'27 sites · 20,182 kW total · CA · Revenue 2023–2062 · Consolidated + Per-Site',status:'green',conf:99},
+      {name:'Production_History_Sunridge_2023-2025.xlsx',fields:'Actual vs P50: +2.1% YTD 2025 · Degradation tracking on curve · Availability 98.7%',status:'green',conf:97},
+      {name:'Revenue_Contracts_Sunridge.pdf',fields:'Mix of PPAs and NEM credits · Escalation 0–2.5% per site · CAISO exposure',status:'green',conf:94},
+      {name:'O&M_Agreements_Sunridge.pdf',fields:'Per-site O&M pricing · Annual escalation 2.0% · Equipment warranties current',status:'green',conf:96},
+    ],
+    chat: [
+      {trigger:/site|bressi|hanford|esplanade/i,reply:'Site-level breakdown available. Top 5 by capacity: Hanford (3.8MW), Esplanade (1.6MW), BlueOaks (1.5MW), Puente (1.4MW), Boronda (0.9MW).',changes:[]},
+      {trigger:/degradation|actual|p50/i,reply:'Actual production 2023–2025 tracking +2.1% above P50. Degradation on curve at 0.40%/yr.',changes:[{f:'P50 vs Actual',from:'Est. only',to:'+2.1% above P50'}]},
+      {trigger:/revenue|rate|ppa/i,reply:'Revenue mix: site PPAs + NEM bill credits. Weighted avg effective rate $52/MWh. Escalation varies per site.',changes:[]},
+    ]
+  }
+};
+
+let curDeal = 'apex';
+let curScen = 'base';
+const SCENS = {base:{irrMult:1,npvMult:1,dscrMult:1},bull:{irrMult:1.1,npvMult:1.18,dscrMult:1.08},bear:{irrMult:0.82,npvMult:0.68,dscrMult:0.87}};
+const SCREENS = ['dashboard','upload','assumptions','model','engineering','chat','memo','portfolio'];
+
+function handleCTA() {
+  const cur = SCREENS.findIndex(s => {
+    const el = document.getElementById('s-'+s);
+    return el && el.classList.contains('active');
+  });
+  if (cur >= 0 && cur < SCREENS.length - 1) {
+    const nextId = SCREENS[cur + 1];
+    const navItems = document.querySelectorAll('.nav-item');
+    const nextBtn = Array.from(navItems).find(el => {
+      const onclick = el.getAttribute('onclick') || '';
+      return onclick.includes(`'${nextId}'`);
+    });
+    go(nextId, nextBtn);
+  }
+}const TITLES = [
+  ['Upload Data Room','Step 1 of 6 — Add all deal documents to begin AI extraction'],
+  ['Review Assumptions','Step 2 of 6 — Verify and override AI-extracted values'],
+  ['Financial Model','Step 3 of 6 — Multi-year projection with live recalculation'],
+  ['Engineering Review','Step 4 of 6 — Owner\'s Engineer technical due diligence'],
+  ['Analyst Chat','Step 5 of 6 — Natural-language model adjustments'],
+  ['Investment Memo','Step 6 of 6 — Committee-ready deal summary'],
+  ['All Deals','Portfolio Overview'],
+];
+const CTA = ['Run AI Analysis →','Build Financial Model →','Engineering Review →','Open Analyst Chat →','Generate Memo →','Export Package','Switch Deal →'];
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function go(id, btn) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const screen = document.getElementById('s-'+id);
+  if (screen) screen.classList.add('active');
+
+  const workflowScreens = ['upload','assumptions','model','engineering','chat','memo'];
+  const idx = workflowScreens.indexOf(id);
+
+  document.querySelectorAll('.nav-item').forEach((el,i)=>{
+    el.classList.remove('active','done');
+    const numEl = el.querySelector('.nav-num');
+    if (numEl && /^\d+$/.test(numEl.textContent.trim())) {
+      numEl.style.fontSize = '10px';
+      if (idx>=0 && i<idx && i<6){el.classList.add('done');numEl.textContent='✓';numEl.style.fontSize='9px';}
+    }
+  });
+  if (btn) btn.classList.add('active');
+
+  const TITLES_MAP = {
+    dashboard: ['Dashboard','Portfolio overview, live production monitoring, and active deals'],
+    upload:    ['Upload Data Room','Step 1 of 6 — Add all deal documents to begin AI extraction'],
+    assumptions:['Review Assumptions','Step 2 of 6 — Verify and override AI-extracted values'],
+    model:     ['Financial Model','Step 3 of 6 — Multi-year projection with live recalculation'],
+    engineering:['Engineering Review','Step 4 of 6 — Technical due diligence & development stage assessment'],
+    chat:      ['Analyst Chat','Step 5 of 6 — Natural-language model adjustments'],
+    memo:      ['Investment Memo','Step 6 of 6 — Committee-ready deal summary'],
+    portfolio: ['All Deals','Portfolio Overview'],
+  };
+  const CTA_MAP = {
+    dashboard:'View Active Deal →', upload:'Run AI Analysis →', assumptions:'Build Financial Model →',
+    model:'Engineering Review →', engineering:'Open Analyst Chat →', chat:'Generate Memo →',
+    memo:'Export Package', portfolio:'Switch Deal →'
+  };
+  const t = TITLES_MAP[id] || ['SolarLedger',''];
+  document.getElementById('top-title').textContent = t[0];
+  document.getElementById('top-sub').textContent = t[1];
+  document.getElementById('main-cta').textContent = CTA_MAP[id] || '';
+
+  if (id==='model') recalc();
+  if (id==='upload') renderUpload();
+  if (id==='assumptions') renderAssumptions();
+  if (id==='engineering') renderEngineering();
+  if (id==='chat') renderChat();
+  if (id==='memo') renderMemo();
+  if (id==='portfolio') renderPortfolio();
+  if (id==='dashboard') initDashboard();
+}
+
+// ─── DEAL SWITCHER ────────────────────────────────────────────────────────────
+function toggleDealDropdown() {
+  const dd = document.getElementById('deal-dropdown');
+  const ch = document.getElementById('deal-chevron');
+  const isOpen = dd.classList.contains('open');
+  dd.classList.toggle('open',!isOpen);
+  ch.classList.toggle('open',!isOpen);
+}
+document.addEventListener('click',e=>{
+  if (!e.target.closest('.deal-selector')) {
+    document.getElementById('deal-dropdown').classList.remove('open');
+    document.getElementById('deal-chevron').classList.remove('open');
+  }
+});
+function switchDeal(dealKey, optionEl) {
+  curDeal = dealKey;
+  const d = DEALS[dealKey];
+  document.getElementById('sidebar-deal-name').textContent = d.name;
+  document.getElementById('sidebar-deal-meta').textContent = d.meta;
+  document.querySelectorAll('.deal-option').forEach(el=>el.classList.remove('active'));
+  if (optionEl) optionEl.classList.add('active');
+  document.getElementById('deal-dropdown').classList.remove('open');
+  document.getElementById('deal-chevron').classList.remove('open');
+  // Reset chat
+  document.getElementById('chat-msgs').innerHTML = '';
+  document.getElementById('audit-trail').innerHTML = '<div class="audit-item"><span class="audit-ts">AI · init</span><div><div><span class="audit-field">Model initialized</span> — documents parsed, assumptions extracted</div></div></div>';
+  const cur = SCREENS.find(s=>document.getElementById('s-'+s).classList.contains('active'));
+  if (cur) go(cur);
+  showNotif(`Switched to: ${d.name}`);
+}
+
+// ─── UPLOAD SCREEN ────────────────────────────────────────────────────────────
+function renderUpload() {
+  const d = DEALS[curDeal];
+  document.getElementById('upload-title').textContent = `New Deal Analysis — ${d.name}`;
+  
+  // Files
+  const fl = document.getElementById('file-list');
+  fl.innerHTML = d.files.map(f=>`<div class="file-chip"><span class="file-dot${f.status==='amber'?' file-dot-amber':''}"></span>${f.name}</div>`).join('');
+  document.getElementById('files-count').textContent = `${d.files.length} of ${d.files.length} ready`;
+  
+  // Extraction preview
+  document.getElementById('extraction-preview').innerHTML = d.files.map(f=>`
+    <tr>
+      <td>${f.name.replace(/_/g,' ').replace(/\.[^.]+$/,'')}</td>
+      <td style="font-size:11px;color:var(--text3)">${f.fields}</td>
+      <td><span class="badge badge-${f.status==='amber'?'amber':'green'}">${f.status==='amber'?'Flagged':'Mapped'}</span></td>
+      <td class="num">${f.conf}%</td>
+    </tr>`).join('');
+  
+  // Deal details form
+  const formFields = [
+    {label:'Deal Name',val:d.name,cls:''},
+    {label:'Capacity (MWdc)',val:d.mwdc||'—',cls:'blue-input'},
+    {label:'Grid Operator',val:d.gridOp,cls:''},
+    {label:'Asset Type',val:d.type,cls:''},
+    {label:'COD / Status',val:d.cod,cls:''},
+    {label:'Asset Life (years)',val:d.life,cls:'blue-input'},
+  ];
+  document.getElementById('deal-details-form').innerHTML = formFields.map(f=>`
+    <div class="fg"><label>${f.label}</label><input type="text" value="${f.val}" class="${f.cls}"></div>`).join('');
+}
+
+// ─── ASSUMPTIONS SCREEN ───────────────────────────────────────────────────────
+function renderAssumptions() {
+  const d = DEALS[curDeal];
+  let html = '';
+  if (curDeal === 'apex') {
+    html = `
+    <div class="two-col mb16">
+      <div class="card">
+        <div class="card-hd">A. Technical Parameters</div>
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>MW dc (Nameplate)</td><td>MWdc</td><td><input class="asmp-input" value="${d.mwdc}"></td></tr>
+          <tr><td>MW ac (POI)</td><td>MWac</td><td><input class="asmp-input" value="${d.mwac}"></td></tr>
+          <tr><td>DC / AC Ratio</td><td>x</td><td><input class="asmp-input" value="${d.dcac}" readonly></td></tr>
+          <tr><td>Annual Yield (P50)</td><td>kWh/kWp</td><td><input class="asmp-input" value="${d.yield}"></td></tr>
+          <tr><td>Availability Factor</td><td>%</td><td><input class="asmp-input" value="${(d.avail*100).toFixed(1)}%"></td></tr>
+          <tr><td>Annual Degradation</td><td>%/yr</td><td><input class="asmp-input" value="${(d.degrad*100).toFixed(2)}%"></td></tr>
+          <tr><td>COD Date</td><td></td><td><input class="asmp-input" value="${d.cod}" readonly></td></tr>
+          <tr><td>Asset Life</td><td>years</td><td><input class="asmp-input" value="${d.life}"></td></tr>
+        </tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-hd">B. Revenue Assumptions</div>
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>PPA Price (Year 1)</td><td>$/MWh</td><td><input class="asmp-input" value="${d.ppa.toFixed(2)}"></td></tr>
+          <tr><td>PPA Escalation</td><td>%/yr</td><td><input class="asmp-input" value="${(d.ppaEsc*100).toFixed(1)}%"></td></tr>
+          <tr><td>PPA Tenor</td><td>years</td><td><input class="asmp-input" value="${d.ppaTenor}"></td></tr>
+          <tr><td>Merchant Price (Post-PPA)</td><td>$/MWh</td><td><input class="asmp-input flagged" value="${d.merch.toFixed(2)}" title="Flagged — Aurora consensus $65; seller assumed $70"></td></tr>
+          <tr><td>Merchant Escalation</td><td>%/yr</td><td><input class="asmp-input flagged" value="${(d.merchEsc*100).toFixed(1)}%"></td></tr>
+          <tr><td>Curtailment</td><td>%</td><td><input class="asmp-input" value="${(d.curtail*100).toFixed(1)}%"></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div class="two-col mb16">
+      <div class="card">
+        <div class="card-hd">C. CAPEX ($'000)</div>
+        <table class="asmp-table"><thead><tr><th>Line Item</th><th style="text-align:right">$'000</th><th style="text-align:right">$/Wdc</th></tr></thead><tbody>
+          <tr><td>Modules</td><td><input class="asmp-input" value="34,440"></td><td><span class="asmp-formula">$0.420</span></td></tr>
+          <tr><td>Field & DC (excl. Modules)</td><td><input class="asmp-input" value="31,245"></td><td><span class="asmp-formula">$0.381</span></td></tr>
+          <tr><td>General & Administrative</td><td><input class="asmp-input" value="11,165"></td><td><span class="asmp-formula">$0.136</span></td></tr>
+          <tr><td>Substation / MV</td><td><input class="asmp-input" value="7,038"></td><td><span class="asmp-formula">$0.086</span></td></tr>
+          <tr><td>Interconnection</td><td><input class="asmp-input" value="3,080"></td><td><span class="asmp-formula">$0.038</span></td></tr>
+          <tr><td>Contingency (3.5%)</td><td><input class="asmp-input flagged" value="3,130"></td><td><span class="asmp-formula">$0.038</span></td></tr>
+          <tr style="background:var(--blue-pale)"><td style="font-weight:700">Total Unlevered CapEx</td><td style="text-align:right;font-family:var(--mono);font-weight:700">110,432</td><td><span class="asmp-formula" style="color:var(--green)">→Dashboard</span></td></tr>
+        </tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-hd">D. Debt & ITC Structure</div>
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Term Loan Size</td><td>$'000</td><td><input class="asmp-input" value="${d.loan.toLocaleString()}"></td></tr>
+          <tr><td>Interest Rate</td><td></td><td><input class="asmp-input" value="SOFR+2.50%" readonly></td></tr>
+          <tr><td>Loan Tenor</td><td>years</td><td><input class="asmp-input" value="${d.tenor}" readonly></td></tr>
+          <tr><td>DSCR Covenant</td><td>x</td><td><input class="asmp-input" value="1.25x" readonly></td></tr>
+          <tr><td>ITC Base Rate</td><td>%</td><td><input class="asmp-input" value="30%" readonly></td></tr>
+          <tr><td>Energy Community Adder</td><td>%</td><td><input class="asmp-input" value="10%" readonly></td></tr>
+          <tr><td>Total ITC</td><td>%</td><td><input class="asmp-input" value="${(d.itc*100).toFixed(0)}%"></td></tr>
+          <tr><td>FMV ($'000)</td><td></td><td><input class="asmp-input" value="${d.fmv.toLocaleString()}"></td></tr>
+        </tbody></table>
+      </div>
+    </div>`;
+  } else if (curDeal === 'clearwater') {
+    html = `
+    <div class="two-col mb16">
+      <div class="card">
+        <div class="card-hd">A. Operating Parameters</div>
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Yield</td><td>hrs/yr</td><td><input class="asmp-input" value="1,906.3"></td></tr>
+          <tr><td>Availability</td><td>%</td><td><input class="asmp-input" value="98.0%"></td></tr>
+          <tr><td>Degradation</td><td>%/yr</td><td><input class="asmp-input" value="0.45%"></td></tr>
+          <tr><td>Availability Reduction (18mo)</td><td>%</td><td><input class="asmp-input flagged" value="3.0%"></td></tr>
+          <tr><td>Asset Life</td><td>years</td><td><input class="asmp-input" value="35"></td></tr>
+        </tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-hd">B. Revenue Curves</div>
+        <table class="asmp-table"><thead><tr><th>Revenue Stream</th><th>Curve</th><th>Sensitivity</th></tr></thead><tbody>
+          <tr><td>ATC (Energy)</td><td><span class="asmp-formula">SE - Oren base</span></td><td><input class="asmp-input" value="100%"></td></tr>
+          <tr><td>REC</td><td><span class="asmp-formula">SE - WM</span></td><td><input class="asmp-input flagged" value="100%"></td></tr>
+          <tr><td>Capacity (ELCC)</td><td><span class="asmp-formula">SE - WM</span></td><td><input class="asmp-input" value="100%"></td></tr>
+          <tr><td>Basis Adjustment</td><td>$/MWh</td><td><input class="asmp-input" value="$0.00"></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div class="two-col mb16">
+      <div class="card">
+        <div class="card-hd">C. OPEX Assumptions</div>
+        <table class="asmp-table"><thead><tr><th>Line Item</th><th style="text-align:right">Value</th><th style="text-align:right">Unit</th></tr></thead><tbody>
+          <tr><td>Insurance</td><td><input class="asmp-input" value="57.2"></td><td><span class="asmp-formula">$k/month</span></td></tr>
+          <tr><td>Asset Management</td><td><input class="asmp-input" value="0.80"></td><td><span class="asmp-formula">$/kWdc/yr</span></td></tr>
+          <tr><td>AM Escalation</td><td><input class="asmp-input" value="2.0%"></td><td><span class="asmp-formula">%/yr</span></td></tr>
+          <tr><td>Uncovered O&M (Yr 1–13)</td><td><input class="asmp-input" value="0.80"></td><td><span class="asmp-formula">$/kWdc</span></td></tr>
+          <tr><td>Uncovered O&M (Yr 14+)</td><td><input class="asmp-input flagged" value="2.50"></td><td><span class="asmp-formula">$/kWdc</span></td></tr>
+          <tr><td>Other OPEX Sensitivity</td><td><input class="asmp-input" value="5.0%"></td><td><span class="asmp-formula">% of OPEX</span></td></tr>
+        </tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-hd">D. Inverter Reserve Schedule</div>
+        <table class="asmp-table"><thead><tr><th>Period</th><th>Start</th><th>End</th></tr></thead><tbody>
+          <tr><td>First Replacement</td><td><input class="asmp-input" value="Year 7"></td><td><input class="asmp-input" value="Year 16"></td></tr>
+          <tr><td>Second Replacement</td><td><input class="asmp-input" value="Year 25"></td><td><input class="asmp-input" value="Year 34"></td></tr>
+          <tr><td>O&M Flip Year</td><td colspan="2"><input class="asmp-input" value="Year 14"></td></tr>
+        </tbody></table>
+      </div>
+    </div>`;
+  } else if (curDeal === 'bess') {
+    html = `
+    <div class="two-col mb16">
+      <div class="card">
+        <div class="card-hd">A. BESS Portfolio — 4 Sites</div>
+        <table class="asmp-table"><thead><tr><th>Site</th><th>MWh</th><th>COD</th><th>Loan ($k)</th></tr></thead><tbody>
+          <tr><td>Site 17 (Bracero Pecan)</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="5,960"></td></tr>
+          <tr><td>21 Jungle Road, Leominster</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q3 2028</span></td><td><input class="asmp-input" value="3,630"></td></tr>
+          <tr><td>101 Sutton Ave, Oxford</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="3,610"></td></tr>
+          <tr><td>130 Turnpike Rd, Turners Falls</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q1 2028</span></td><td><input class="asmp-input" value="6,180"></td></tr>
+          <tr style="background:var(--blue-pale)"><td style="font-weight:700">Portfolio Total</td><td colspan="2" style="font-family:var(--mono);font-weight:700;text-align:right">TBD MWh</td><td style="font-family:var(--mono);font-weight:700;text-align:right">19,380</td></tr>
+        </tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-hd">B. Capital Structure (Per Site Avg)</div>
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Interest Rate</td><td></td><td><input class="asmp-input" value="SOFR+5.50%"></td></tr>
+          <tr><td>Term Loan Tenor</td><td>years</td><td><input class="asmp-input" value="7"></td></tr>
+          <tr><td>TRABL Size (Total)</td><td>$'000</td><td><input class="asmp-input" value="14,814"></td></tr>
+          <tr><td>ITC Base Rate</td><td>%</td><td><input class="asmp-input" value="30%"></td></tr>
+          <tr><td>Domestic Content Adder</td><td>%</td><td><input class="asmp-input" value="10%"></td></tr>
+          <tr><td>Total ITC</td><td>%</td><td><input class="asmp-input" value="40%"></td></tr>
+          <tr><td>FMV Step-Up</td><td>%</td><td><input class="asmp-input" value="20%"></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div class="card mb16">
+      <div class="card-hd">C. Revenue Assumptions — BESS <span class="badge badge-amber">Revenue TBD — Pending IA</span></div>
+      <table class="asmp-table"><thead><tr><th>Revenue Stream</th><th>Status</th><th style="text-align:right">Avg ($/kW-mo)</th></tr></thead><tbody>
+        <tr><td>Arbitrage (Energy)</td><td><span class="badge badge-amber">Pending IA</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
+        <tr><td>Frequency Regulation (FR)</td><td><span class="badge badge-amber">Pending</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
+        <tr><td>Spinning Reserve (RR)</td><td><span class="badge badge-amber">Pending</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
+        <tr><td>Scheduled Revenue (Contracted)</td><td><span class="badge badge-red">Not Confirmed</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
+      </tbody></table>
+    </div>`;
+  } else if (curDeal === 'sunridge') {
+    html = `
+    <div class="card mb16">
+      <div class="card-hd">A. Portfolio Technical Parameters</div>
+      <div class="two-col">
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Total Portfolio Capacity</td><td>kW</td><td><input class="asmp-input" value="20,182"></td></tr>
+          <tr><td>Number of Sites</td><td>#</td><td><input class="asmp-input" value="27"></td></tr>
+          <tr><td>Availability Factor</td><td>%</td><td><input class="asmp-input" value="98.5%"></td></tr>
+          <tr><td>Annual Degradation</td><td>%/yr</td><td><input class="asmp-input" value="0.40%"></td></tr>
+        </tbody></table>
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Location</td><td></td><td><input class="asmp-input" value="California"></td></tr>
+          <tr><td>Grid Operator</td><td></td><td><input class="asmp-input" value="CAISO"></td></tr>
+          <tr><td>Revenue Start</td><td>year</td><td><input class="asmp-input" value="2025"></td></tr>
+          <tr><td>Model Horizon</td><td>years</td><td><input class="asmp-input" value="35+"></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+    <div class="card mb16">
+      <div class="card-hd">B. Top 10 Sites by Capacity</div>
+      <table class="asmp-table"><thead><tr><th>Site</th><th style="text-align:right">kW</th><th>Lease End</th><th>Revenue Escalation</th></tr></thead><tbody>
+        <tr><td>Hanford</td><td style="text-align:right;font-family:var(--mono)">3,804</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Esplanade</td><td style="text-align:right;font-family:var(--mono)">1,557</td><td><input class="asmp-input" value="2061"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>BlueOaks</td><td style="text-align:right;font-family:var(--mono)">1,530</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Puente</td><td style="text-align:right;font-family:var(--mono)">1,428</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Palmdale</td><td style="text-align:right;font-family:var(--mono)">1,051</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Boronda</td><td style="text-align:right;font-family:var(--mono)">900</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>SanDimas</td><td style="text-align:right;font-family:var(--mono)">576</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Orland</td><td style="text-align:right;font-family:var(--mono)">580</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Colusa</td><td style="text-align:right;font-family:var(--mono)">570</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Clovis</td><td style="text-align:right;font-family:var(--mono)">480</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+      </tbody></table>
+    </div>`;
+  }
+  document.getElementById('assumptions-content').innerHTML = html;
+}
+
+// ─── MODEL CALCULATION ────────────────────────────────────────────────────────
+function calcModel() {
+  const d = DEALS[curDeal];
+  const m = SCENS[curScen];
+  const yrs = [];
+  for (let i=0; i<d.life; i++) {
+    const yr = i+1;
+    const degrad_f = Math.pow(1-d.degrad, i);
+    const gross = d.mwdc > 0 ? d.mwdc * d.yield * d.avail * degrad_f : (d.mwdc===0 && curDeal==='sunridge' ? 28489 * Math.pow(1-d.degrad,i) : 0);
+    const net = gross * (1 - d.curtail);
+    let rev;
+    if (curDeal === 'sunridge') {
+      // Sunridge: actual revenue data from model
+      const baseRev = [9207,9516,9836,10169,10433,10778,11144,11524,11917,12323,12745,13182,13635,14104,14590,15093,15285,11671,10518,8510,9932,9207,9516,9836,10169,10433,10778,11144,11524,11917,12323,12745,13182,13635];
+      rev = (baseRev[i] || baseRev[baseRev.length-1]) * m.irrMult;
+    } else if (curDeal === 'bess') {
+      rev = 0; // Revenue TBD
+    } else if (curDeal === 'clearwater') {
+      rev = net > 0 ? net * d.merch * Math.pow(1+d.merchEsc,i) / 1000 * m.irrMult : 0;
+    } else {
+      const isPPA = yr <= d.ppaTenor;
+      const ppaP = d.ppa * Math.pow(1+d.ppaEsc, i);
+      const merchP = d.merch * Math.pow(1+d.merchEsc, i);
+      rev = isPPA ? net*ppaP/1000 : net*merchP/1000*m.irrMult;
+    }
+    const opexTotal = Object.entries(d.opex).reduce((sum,[k,v])=>sum+v*Math.pow(1+(d.opexEsc[k]||0),i),0);
+    const ebitda = rev - opexTotal;
+    const begBal = d.loan>0 ? Math.max(0, d.loan - d.loan/d.tenor*i) : 0;
+    const amort = d.loan>0 && yr<=d.tenor ? d.loan/d.tenor : 0;
+    const intExp = begBal * d.rate;
+    const ds = amort + intExp;
+    const dscr = ds>0 ? ebitda/ds : 0;
+    const cfads = ebitda - ds;
+    yrs.push({yr,net,rev,opexTotal,ebitda,ds,dscr,cfads,begBal,amort,intExp});
+  }
+  const itcProc = d.fmv * d.itc;
+  const equityIn = Math.max(d.capex - d.loan - itcProc, 0);
+  let npvSum = -equityIn;
+  let cumCF = -equityIn;
+  let payback = null;
+  yrs.forEach((y,i)=>{
+    npvSum += y.cfads/Math.pow(1.08,i+1);
+    cumCF += y.cfads;
+    if (!payback && cumCF>0) payback=i+1;
+  });
+  const minDSCR = Math.min(...yrs.filter(y=>y.dscr>0).map(y=>y.dscr).concat([999]));
+  return {yrs, npvSum:npvSum*m.npvMult, irr:d.baseIRR*m.irrMult, minDSCR:minDSCR===999?d.baseDSCR*m.dscrMult:minDSCR*m.dscrMult, payback:payback||d.payback};
+}
+
+function recalc() {
+  const d = DEALS[curDeal];
+  const res = calcModel();
+  const m = SCENS[curScen];
+  const irrPre = (res.irr*100).toFixed(1)+'%';
+  const irrPost = (res.irr*0.83*100).toFixed(1)+'%';
+  const unlPre = (res.irr*0.945*100).toFixed(1)+'%';
+  const unlPost = (res.irr*0.726*100).toFixed(1)+'%';
+  const moic = (d.baseIRR*10*m.irrMult+1.5).toFixed(1)+'x';
+  const margin = (d.ebitdaMargin*m.dscrMult*100).toFixed(1)+'%';
+  
+  setTxt('m-irr', irrPre);
+  setTxt('m-npv', '$'+Math.round(res.npvSum/1000).toLocaleString());
+  setTxt('m-dscr', res.minDSCR>0 ? res.minDSCR.toFixed(2)+'x' : 'N/A');
+  setTxt('m-payback', (res.payback||'—')+' yrs');
+  setTxt('model-life-title', d.life);
+  setTxt('r-unlev-pre', unlPre);
+  setTxt('r-unlev-post', unlPost);
+  setTxt('r-lev-pre', irrPre);
+  setTxt('r-lev-post', irrPost);
+  setTxt('r-moic', moic);
+  setTxt('r-ebitda', margin);
+  setTxt('ls-irr', irrPre);
+  setTxt('ls-dscr', res.minDSCR>0?res.minDSCR.toFixed(2)+'x':'N/A');
+  setTxt('ls-npv', '$'+Math.round(res.npvSum/1000).toLocaleString()+'K');
+  setTxt('memo-irr', irrPre);
+  buildRevTable(res.yrs);
+  buildOpexTable(res.yrs);
+  buildDebtTable(res.yrs);
+  buildSU();
+  buildChart(res.yrs);
+}
+function setTxt(id,val){const e=document.getElementById(id);if(e)e.textContent=val}
+
+function getSelYrs(life) {
+  // Always show year 1, then select spread based on life
+  const yrs = [0];
+  if (life>=3) yrs.push(2);
+  if (life>=5) yrs.push(4);
+  if (life>=7) yrs.push(6);
+  if (life>=10) yrs.push(9);
+  if (life>=15) yrs.push(14);
+  if (life>=20) yrs.push(19);
+  if (life>=25) yrs.push(24);
+  if (life>=35) yrs.push(34);
+  return yrs.filter(i=>i<life);
+}
+
+function buildRevTable(yrs) {
+  const d = DEALS[curDeal];
+  const sel = getSelYrs(d.life);
+  const thead = document.getElementById('rev-thead');
+  if (thead) {
+    thead.innerHTML = '<th>Line Item</th>'+sel.map(i=>`<th>Yr ${i+1}${i===0?` (${d.cod.replace('Q2 ','')||2030})`:''}${i===d.life-1?' (Final)':''}</th>`).join('');
+  }
+  const rows = [
+    {label:'Net Generation (MWh)',vals:sel.map(i=>yrs[i]?Math.round(yrs[i].net).toLocaleString():'—'),cls:''},
+    {label:`Contracted Revenue ($'000)`,vals:sel.map(i=>yrs[i]&&i<d.ppaTenor?'$'+Math.round(yrs[i].rev).toLocaleString():'-'),cls:''},
+    {label:`Merchant/Other Revenue ($'000)`,vals:sel.map(i=>yrs[i]&&i>=d.ppaTenor?'$'+Math.round(yrs[i].rev).toLocaleString():'-'),cls:''},
+    {label:`TOTAL GROSS REVENUE ($'000)`,vals:sel.map(i=>yrs[i]?'$'+Math.round(yrs[i].rev).toLocaleString():'—'),cls:'total',bold:true},
+    {label:`(-) Total OPEX ($'000)`,vals:sel.map(i=>yrs[i]?`(${Math.round(yrs[i].opexTotal).toLocaleString()})`:'—'),cls:'',neg:true},
+    {label:`EBITDA ($'000)`,vals:sel.map(i=>yrs[i]?'$'+Math.round(yrs[i].ebitda).toLocaleString():'—'),cls:'sub-total'},
+    {label:'EBITDA Margin',vals:sel.map(i=>yrs[i]&&yrs[i].rev>0?(yrs[i].ebitda/yrs[i].rev*100).toFixed(1)+'%':'—'),cls:''},
+  ];
+  const tbody = document.getElementById('rev-tbody');
+  if (tbody) tbody.innerHTML = rows.map(r=>`<tr class="${r.cls}"><td class="${r.bold?'bold':''}">${r.label}</td>${r.vals.map(v=>`<td class="val ${r.neg?'neg':r.cls==='total'?'pos':''}">${v}</td>`).join('')}</tr>`).join('');
+}
+
+function buildOpexTable(yrs) {
+  const d = DEALS[curDeal];
+  const sel = [0,4,9,19,d.life-1].filter((v,i,a)=>v<d.life&&a.indexOf(v)===i);
+  const LABELS = {pvo:'PV O&M',util:'Utility O&M',para:'Parasitic Load',uncov:'Uncovered O&M',tel:'Telecom',ins:'Insurance',am:'Asset Mgmt',at:'Audit & Tax',lc:'LC/Fin Fees',inv:'Inverter Reserve',other:'Other OPEX',lease:'Oper. Lease'};
+  const thead = document.getElementById('opex-thead');
+  if (thead) thead.innerHTML = '<th>Line Item</th>'+sel.map(i=>`<th>Yr ${i+1}</th>`).join('');
+  const rows = [];
+  Object.entries(d.opex).forEach(([k,v])=>{
+    if (v===0) return;
+    const vals = sel.map(i=>Math.round(v*Math.pow(1+(d.opexEsc[k]||0),i)).toLocaleString());
+    rows.push(`<tr><td>${LABELS[k]||k}</td>${vals.map(v=>`<td class="val">${v}</td>`).join('')}</tr>`);
+  });
+  const tots = sel.map(i=>Math.round(yrs[i]?yrs[i].opexTotal:0).toLocaleString());
+  rows.push(`<tr class="total"><td class="bold">TOTAL OPEX</td>${tots.map(v=>`<td class="val neg">(${v})</td>`).join('')}</tr>`);
+  const tbody = document.getElementById('opex-tbody');
+  if (tbody) tbody.innerHTML = rows.join('');
+}
+
+function buildDebtTable(yrs) {
+  const d = DEALS[curDeal];
+  if (d.loan===0) {
+    const thead = document.getElementById('debt-thead');
+    const tbody = document.getElementById('debt-tbody');
+    if (thead) thead.innerHTML = '<th>Metric</th><th>Value</th>';
+    if (tbody) tbody.innerHTML = '<tr><td>No term debt</td><td class="val">—</td></tr>';
+    return;
+  }
+  const sel = [0,4,9,14,19].filter(i=>i<d.life);
+  const thead = document.getElementById('debt-thead');
+  if (thead) thead.innerHTML = '<th>Line Item</th>'+sel.map(i=>`<th>Yr ${i+1}</th>`).join('');
+  const rows = [
+    {lbl:`Beginning Balance ($'000)`,vals:sel.map(i=>yrs[i]?Math.round(yrs[i].begBal).toLocaleString():'—'),cls:''},
+    {lbl:'Amortization',vals:sel.map(i=>yrs[i]?Math.round(yrs[i].amort).toLocaleString():'—'),cls:''},
+    {lbl:'Interest Expense',vals:sel.map(i=>yrs[i]?`(${Math.round(yrs[i].intExp).toLocaleString()})`:'—'),cls:'',neg:true},
+    {lbl:'Total Debt Service',vals:sel.map(i=>yrs[i]?`(${Math.round(yrs[i].ds).toLocaleString()})`:'—'),cls:'sub-total',neg:true},
+    {lbl:`EBITDA ($'000)`,vals:sel.map(i=>yrs[i]?'$'+Math.round(yrs[i].ebitda).toLocaleString():'—'),cls:''},
+    {lbl:`CFADS ($'000)`,vals:sel.map(i=>yrs[i]?'$'+Math.round(yrs[i].cfads).toLocaleString():'—'),cls:'sub-total'},
+    {lbl:'DSCR',vals:sel.map(i=>yrs[i]&&yrs[i].dscr>0?yrs[i].dscr.toFixed(2)+'x':'n/a'),cls:'total'},
+  ];
+  const tbody = document.getElementById('debt-tbody');
+  if (tbody) tbody.innerHTML = rows.map(r=>`<tr class="${r.cls}"><td class="bold">${r.lbl}</td>${r.vals.map(v=>`<td class="val ${r.neg?'neg':r.cls==='total'?'pos':''}">${v}</td>`).join('')}</tr>`).join('');
+}
+
+function buildSU() {
+  const d = DEALS[curDeal];
+  const itcProc = Math.round(d.fmv*d.itc).toLocaleString();
+  const total = Math.round(d.capex+(d.loan>0?9244:0)).toLocaleString();
+  document.getElementById('su-grid').innerHTML = `
+    <div>
+      <div class="fin-row"><span class="fin-lbl">Term Loan (CTL)</span><span class="fin-val">${d.loan>0?'$'+d.loan.toLocaleString()+'K':'N/A'}</span></div>
+      <div class="fin-row"><span class="fin-lbl">Preferred Equity</span><span class="fin-val">${d.prefEquity>0?'$'+d.prefEquity.toLocaleString()+'K':'—'}</span></div>
+      <div class="fin-row"><span class="fin-lbl">ITC Transfer Proceeds</span><span class="fin-val pos">${d.fmv>0?'$'+itcProc+'K':'TBD'}</span></div>
+      <div class="fin-row"><span class="fin-lbl">Sponsor Equity</span><span class="fin-val">${d.capex>0?'$'+(Math.max(0,d.capex-d.loan-d.fmv*d.itc-d.prefEquity)).toLocaleString()+'K':'—'}</span></div>
+      <div class="fin-row" style="border-top:2px solid var(--line-light);margin-top:4px"><span class="fin-lbl" style="font-weight:700">Total Sources</span><span class="fin-val" style="font-weight:700">${d.capex>0?'$'+total+'K':'—'}</span></div>
+    </div>
+    <div>
+      <div class="fin-row"><span class="fin-lbl">Total Unlevered CapEx</span><span class="fin-val">${d.capex>0?'$'+d.capex.toLocaleString()+'K':'N/A'}</span></div>
+      <div class="fin-row"><span class="fin-lbl">Financing Fees & IDC</span><span class="fin-val">${d.loan>0?'$9,244K':'—'}</span></div>
+      <div class="fin-row" style="border-top:2px solid var(--line-light);margin-top:4px"><span class="fin-lbl" style="font-weight:700">Total Uses</span><span class="fin-val" style="font-weight:700">${d.capex>0?'$'+total+'K':'—'}</span></div>
+    </div>`;
+}
+
+function buildChart(yrs) {
+  const container = document.getElementById('cf-chart');
+  if (!container) return;
+  container.innerHTML='';
+  const cfs = yrs.map(y=>y.cfads);
+  const max = Math.max(...cfs.filter(v=>v>0));
+  if (max<=0) return;
+  const colors = ['#1565C7','#1976D2','#1E88E5','#2196F3','#42A5F5'];
+  cfs.forEach((cf,i)=>{
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    const pct = Math.min(Math.max((cf/max)*140,0),140);
+    const col = curScen==='bear'?'#E65100':curScen==='bull'?'#2E7D32':colors[Math.min(Math.floor(i/7),4)];
+    bar.style.cssText = `height:${Math.max(pct,2)}px;background:${col};opacity:${0.4+i/yrs.length*0.55}`;
+    if (i%5===0||i===yrs.length-1){const lbl=document.createElement('div');lbl.className='chart-bar-label';lbl.textContent='Y'+(i+1);bar.appendChild(lbl);}
+    container.appendChild(bar);
+  });
+}
+
+// ─── ENGINEERING SCREEN ───────────────────────────────────────────────────────
+function renderEngineering() {
+  const d = DEALS[curDeal];
+  let html = '';
+  const configs = {
+    apex: {
+      score: 74, critical: 0, major: 3,
+      scoreLabel: 'Amber — review required',
+      sections: [
+        {title:'PVsyst Energy Model Review',findings:[
+          {sev:'green',title:'P50 Yield Benchmark',desc:'Submitted P50 of 1,710 kWh/kWp validated against EIA irradiance data for Southeast Region, NC. Within ±3% of benchmark.',action:'✓ No action required'},
+          {sev:'green',title:'Performance Ratio',desc:'PR of 81.5% within normal range for fixed-tilt single-axis tracker in SERC. Benchmark: 78–85%.',action:'✓ No action required'},
+          {sev:'amber',title:'Soiling Loss Assumption',desc:'PVsyst applies 1.5% soiling loss. Regional benchmark for NC is 2.0–2.5%. May overstate yield by 0.5–1.0%.',impact:'Est. NPV impact: ($380K)',action:'→ Request soiling study or apply conservative haircut'},
+        ]},
+        {title:'Interconnection Risk (Southeast Utility)',findings:[
+          {sev:'green',title:'Queue Position & COD Milestone',desc:'Active queue position confirmed. COD Q2 2030 consistent with SERC cluster timeline. Deposit $1.35M funded.',action:'✓ Milestones on track'},
+          {sev:'amber',title:'Inverter Model Change Risk',desc:'EPC switched inverter from Sungrow SG3125 to SG3600 in March 2026. Utility not notified. May trigger re-study.',impact:'Est. impact: 4–8 month delay; $2–6M revenue delay',action:'→ File change notification with utility immediately'},
+          {sev:'green',title:'Interconnection Agreement',desc:'IA executed. No outstanding technical conditions. Grid stability studies completed for all four project sites.',action:'✓ No open items'},
+        ]},
+      ],
+      table: [
+        {item:'Short Circuit Study',status:'green',sev:'—'},{item:'Power Flow Study',status:'green',sev:'—'},
+        {item:'Harmonics Study',status:'green',sev:'—'},{item:'Structural (Tracker Foundations)',status:'green',sev:'—'},
+        {item:'Protection & Control Design',status:'green',sev:'—'},{item:'Inverter Re-Study (SG3600)',status:'red',sev:'Major'},
+      ]
+    },
+    clearwater: {
+      score: 81, critical: 0, major: 1,
+      scoreLabel: 'Green — minor items only',
+      sections: [
+        {title:'Operating Performance Review',findings:[
+          {sev:'green',title:'P50 vs Actual Production',desc:'2023–2025 actual production tracking +2.1% above P50. Degradation on curve. No significant underperformance detected.',action:'✓ Outperforming model'},
+          {sev:'green',title:'Availability Factor',desc:'Reported availability 98.5% vs 98.0% model assumption. Inverter uptime and O&M response time within industry benchmark.',action:'✓ Availability above budget'},
+          {sev:'amber',title:'Inverter Reserve Adequacy',desc:'First replacement cycle begins Year 7. Reserve funding should start accruing now. Current reserve balance TBD.',impact:'Est. impact: $55K/yr underfunding risk',action:'→ Confirm inverter reserve balance and funding schedule'},
+        ]},
+      ],
+      table: [
+        {item:'Production History (3yr)',status:'green',sev:'—'},{item:'Degradation Analysis',status:'green',sev:'—'},
+        {item:'O&M Agreement Review',status:'green',sev:'—'},{item:'Equipment Condition (Inverters)',status:'green',sev:'—'},
+        {item:'Inverter Reserve Funding',status:'amber',sev:'Minor'},{item:'Insurance Adequacy',status:'green',sev:'—'},
+      ]
+    },
+    bess: {
+      score: 68, critical: 0, major: 2,
+      scoreLabel: 'Amber — revenue risk unresolved',
+      sections: [
+        {title:'BESS Technical Review',findings:[
+          {sev:'green',title:'Battery Chemistry & Degradation',desc:'LFP chemistry confirmed. 2%/yr degradation modeled per manufacturer spec. Thermal management system compliant.',action:'✓ Technology risk low'},
+          {sev:'amber',title:'Revenue Model Completeness',desc:'Scheduled revenue not confirmed pending final IA. Arbitrage and ancillary service projections rely on proprietary curves not yet validated.',impact:'High: Revenue TBD — deal IRR unconfirmable',action:'→ Obtain final IA and confirm revenue curves before proceeding'},
+          {sev:'amber',title:'DSCR at Covenant Floor',desc:'Min DSCR 1.23x is near the 1.25x covenant at several sites. Limited headroom if revenue comes in below projection.',impact:'Est. impact: DSCR breach risk if revenue -5%',action:'→ Request lender covenant flexibility or increase DSRA'},
+        ]},
+      ],
+      table: [
+        {item:'Battery Specs & Chemistry',status:'green',sev:'—'},{item:'ITC Safe Harbor',status:'green',sev:'—'},
+        {item:'Interconnection Agreement',status:'amber',sev:'Major'},{item:'Revenue Model (Arbitrage)',status:'amber',sev:'Major'},
+        {item:'Construction Schedule',status:'green',sev:'—'},{item:'DSCR Covenant Compliance',status:'amber',sev:'Minor'},
+      ]
+    },
+    sunridge: {
+      score: 86, critical: 0, major: 0,
+      scoreLabel: 'Green — operating portfolio, no critical items',
+      sections: [
+        {title:'Portfolio Performance Review',findings:[
+          {sev:'green',title:'Actual vs P50 — Portfolio Level',desc:'27-site portfolio generating +2.1% above P50 on a kWh basis over 2023–2025. Degradation tracking at 0.40%/yr on curve.',action:'✓ Outperforming underwriting model'},
+          {sev:'green',title:'Site Availability',desc:'Reported fleet availability 98.7%. Consistent with O&M SLA requirements. No sites in extended outage.',action:'✓ All sites operational'},
+          {sev:'green',title:'Revenue Contracts',desc:'Mix of PPAs and NEM credits. Site-level escalation 0–2.5%/yr. No contract expirations within 5 years.',action:'✓ Revenue contract stack intact'},
+        ]},
+      ],
+      table: [
+        {item:'Site-Level P50 Validation',status:'green',sev:'—'},{item:'Degradation Tracking',status:'green',sev:'—'},
+        {item:'O&M Performance',status:'green',sev:'—'},{item:'Revenue Contracts',status:'green',sev:'—'},
+        {item:'Equipment Warranties',status:'green',sev:'—'},{item:'Insurance Coverage',status:'green',sev:'—'},
+      ]
+    }
+  };
+  const cfg = configs[curDeal];
+  html = `
+  <div class="metrics" style="grid-template-columns:repeat(3,1fr)">
+    <div class="metric"><div class="metric-label">Portfolio Health Score</div><div class="metric-value mv-${cfg.score>=80?'green':cfg.score>=65?'amber':'red'}">${cfg.score}<span style="font-size:13px;color:var(--text3)">/100</span></div><div class="metric-sub">${cfg.scoreLabel}</div></div>
+    <div class="metric"><div class="metric-label">Critical Findings</div><div class="metric-value mv-${cfg.critical>0?'red':'green'}">${cfg.critical}</div><div class="metric-sub">${cfg.critical>0?'Require immediate action':'None identified'}</div></div>
+    <div class="metric"><div class="metric-label">Major Findings</div><div class="metric-value mv-${cfg.major>0?'amber':'green'}">${cfg.major}</div><div class="metric-sub">${cfg.major>0?'Require resolution':'None identified'}</div></div>
+  </div>
+  <div class="${cfg.sections.length>1?'two-col':'one-col'} mb16">`;
+  cfg.sections.forEach(sec=>{
+    html += `<div class="card"><div class="card-hd">${sec.title}</div>`;
+    sec.findings.forEach(f=>{
+      html += `<div class="risk-item"><div class="risk-sev"><span class="badge badge-${f.sev}">${f.sev==='green'?'Pass':f.sev==='amber'?'Review':'Issue'}</span></div><div class="risk-body"><div class="risk-title">${f.title}</div><div class="risk-desc">${f.desc}</div>${f.impact?`<div class="risk-impact med">${f.impact}</div>`:''}${f.action?`<div class="risk-action">${f.action}</div>`:''}</div></div>`;
+    });
+    html += '</div>';
+  });
+  html += `</div><div class="card mb16"><div class="card-hd">Engineering Studies Checklist</div><table class="tbl"><thead><tr><th>Study / Document</th><th>Status</th><th>Severity</th></tr></thead><tbody>`;
+  cfg.table.forEach(row=>{
+    html += `<tr><td>${row.item}</td><td><span class="badge badge-${row.status==='red'?'red':row.status==='amber'?'amber':'green'}">${row.status==='green'?'Complete':row.status==='amber'?'Pending':'Required'}</span></td><td>${row.sev!=='—'?`<span class="badge badge-amber">${row.sev}</span>`:'—'}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  // ── DEVELOPMENT STAGE ROADMAP ──────────────────────────────────────────────
+  const stageData = {
+    apex: {
+      current: 3, // 0=Greenfield, 1=Early, 2=Mid, 3=Late, 4=RTB
+      label: 'Late-Stage',
+      color: 'blue',
+      rationale: 'Based on uploaded documents: executed Interconnection Agreement, 90%+ IFP design package available, initial PPA executed with utility counterparty, term sheet received from lender, and full geotech confirmed. Missing items prevent RTB classification.',
+      completed: [
+        'Owner Advisory Report prepared',
+        'Conceptual site / 10% design complete',
+        'Preliminary injection analysis done',
+        'Full site control achieved',
+        'Access to POI and easements secured',
+        'Injection study & queue analysis completed',
+        'Mineral research complete',
+        'CUP Package & Approval received',
+        'Phase 1 ESA complete',
+        'IX application submitted',
+        'Production estimates (PVsyst P50/P90) generated',
+        'RFP for EPC & CM contracts issued',
+        '30% Design Package / OEOR complete',
+        'Preliminary title commitment obtained',
+        'Environmental field studies complete',
+        'Final IA studies complete',
+        'Surface waiver secured (70%+)',
+        'ALTA & LIDAR surveys complete',
+        'Preliminary & Full Geotech complete',
+        '60% Design Package / EPC complete',
+        'RFP / PO for long-lead equipment issued (Modules, XFMR, Inverters)',
+        'Non-discretionary permits obtained',
+        'Transmission capacity secured',
+        '90% IFP Design Package / EPC complete',
+        'Executed GIA (Grid Interconnection Agreement)',
+        'Title commitment obtained',
+        'Initial / Mid financing agreements in place',
+        'Initial PPA / Hedge contract executed ($59/MWh, 5-year)'
+      ],
+      pending_current: [
+        { task: 'Issue LOI to EPC / Vendor Deposits', note: 'EPC contract not yet executed — LOI stage', sev: 'amber' },
+        { task: 'Issue LNTP(s) for BoP Equipment', note: 'GSU transformer delivery 2 weeks behind; LNTP pending expedite confirmation', sev: 'amber' },
+        { task: 'Tax abatements secured', note: 'Confirmation not found in uploaded documents — verify status', sev: 'amber' },
+      ],
+      next_stage: 'RTB Launch',
+      next_items: [
+        'Execute EPC contracts (pending inverter re-study resolution with utility)',
+        'Execute major supply agreements (modules confirmed; inverter model change must be filed)',
+        'Complete final engineering & design (IFC AHJ Design Package)',
+        'Secure all EPC/IX-related permits',
+        'Execute financing agreement (term sheet received; execution pending)',
+        'Issue Final NTP (FNTP)',
+        'Finalize construction schedule'
+      ]
+    },
+    clearwater: {
+      current: 4,
+      label: 'RTB / Operating',
+      color: 'green',
+      rationale: 'Operating asset with 3-year production history. All development, permitting, construction, and financing milestones completed at COD. Asset is in post-COD operating phase.',
+      completed: [
+        'All development stages (Greenfield through RTB) completed at COD',
+        'EPC contracts executed and construction complete',
+        'All permits secured and interconnection operational',
+        'Financing closed — SOFR+5.50% term loan active',
+        'COD achieved — asset generating revenue',
+        'O&M agreement in place and active',
+        'Production history: 3 years of actual data (+2.1% vs P50)'
+      ],
+      pending_current: [
+        { task: 'Inverter reserve funding confirmation', note: 'First replacement cycle in Year 7 — reserve balance TBD', sev: 'amber' }
+      ],
+      next_stage: null,
+      next_items: []
+    },
+    bess: {
+      current: 2,
+      label: 'Mid-Stage',
+      color: 'amber',
+      rationale: 'BESS portfolio has preliminary geotech, 60% design packages, and long-lead equipment RFPs issued. However, final Interconnection Agreements are not executed, PPA/hedge contracts are not finalized, and financing agreements are still initial stage — preventing Late-Stage classification.',
+      completed: [
+        'Site control and access to POI secured',
+        'Injection study & queue analysis complete',
+        'CUP Package & Approval received',
+        'Phase 1 ESA complete',
+        'IX applications submitted',
+        'Production / revenue estimates prepared',
+        'RFP EPC & CM contracts issued',
+        '30% Design Package complete',
+        'Environmental field studies complete',
+        'Final IA studies underway (not fully executed)',
+        'ALTA & LIDAR surveys complete',
+        'Preliminary Geotech complete',
+        '60% Design Package / EPC complete',
+        'RFP / PO for long-lead equipment issued (Battery systems, XFMR, HV equipment)'
+      ],
+      pending_current: [
+        { task: 'Execute final Interconnection Agreements (all 4 sites)', note: 'Critical blocker — deal IRR unconfirmable without executed IAs', sev: 'red' },
+        { task: 'Confirm scheduled revenue amounts (arbitrage + ancillary)', note: 'Proprietary revenue curves not yet validated', sev: 'red' },
+        { task: 'RFP for O&M, Asset and Energy Management finalized', note: 'O&M agreements not confirmed in uploaded documents', sev: 'amber' }
+      ],
+      next_stage: 'Late-Stage',
+      next_items: [
+        'Obtain non-discretionary permits',
+        'Secure transmission capacity (all 4 sites)',
+        'Complete 90% IFP Design Package',
+        'Execute GIAs (all 4 sites)',
+        'Secure tax abatements',
+        'Complete full geotech',
+        'Obtain title commitments',
+        'Execute initial / mid financing agreements',
+        'Execute initial PPA / hedge contracts (revenue still TBD)',
+        'Issue LOI to EPC / Vendor Deposits',
+        'Issue LNTP(s) for BoP Equipment'
+      ]
+    },
+    sunridge: {
+      current: 4,
+      label: 'RTB / Operating',
+      color: 'green',
+      rationale: 'Operating portfolio of 27 sites. All development milestones completed. Portfolio has multi-year production history demonstrating above-P50 performance. No development actions required.',
+      completed: [
+        'All development stages (Greenfield through RTB) completed for all 27 sites',
+        'All EPC contracts executed and construction complete',
+        'All permits secured and grid connections operational',
+        'Financing closed on all sites',
+        'COD achieved for full portfolio',
+        'O&M agreements active',
+        'Production history: 2023–2025 data (+2.1% vs P50 portfolio average)'
+      ],
+      pending_current: [],
+      next_stage: null,
+      next_items: []
+    }
+  };
+
+  const stage = stageData[curDeal];
+  const stageNames = ['Greenfield', 'Early-Stage', 'Mid-Stage', 'Late-Stage', 'RTB Launch'];
+  const stageColors = ['#6B7280','#92400E','#1E40AF','#1565C7','#2E7D32'];
+  const stageBg = ['rgba(107,114,128,0.12)','rgba(146,64,14,0.12)','rgba(30,64,175,0.12)','rgba(21,101,199,0.12)','rgba(46,125,50,0.12)'];
+
+  let stageHTML = `<div class="card mb16">
+    <div class="card-hd">Development Stage Assessment <span class="badge badge-${stage.color === 'green' ? 'green' : stage.color === 'amber' ? 'amber' : 'blue'}">${stage.label}</span></div>
+    <div style="margin-bottom:18px">
+      <!-- Stage Progress Bar -->
+      <div style="display:flex;gap:4px;margin-bottom:12px">`;
+
+  stageNames.forEach((name, i) => {
+    const isCompleted = i < stage.current;
+    const isCurrent = i === stage.current;
+    const isFuture = i > stage.current;
+    const bg = isCurrent ? stageColors[i] : isCompleted ? 'rgba(46,125,50,0.85)' : 'rgba(200,210,220,0.4)';
+    const textCol = (isCurrent || isCompleted) ? '#fff' : 'var(--text3)';
+    const border = isCurrent ? `2px solid ${stageColors[i]}` : isCompleted ? '2px solid rgba(46,125,50,0.7)' : '2px solid var(--line-light)';
+    stageHTML += `<div style="flex:1;padding:7px 6px;border-radius:6px;background:${bg};border:${border};text-align:center;font-size:10px;font-weight:600;color:${textCol};position:relative">
+      ${isCompleted ? '<span style="font-size:10px">✓ </span>' : ''}${name}
+      ${isCurrent ? '<div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ' + stageColors[i] + '"></div>' : ''}
+    </div>`;
+  });
+
+  stageHTML += `</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;padding:10px 12px;background:var(--blue-pale);border-radius:var(--r);border-left:3px solid var(--blue);margin-top:8px">
+        <strong>Assessment basis:</strong> ${stage.rationale}
+      </div>
+    </div>`;
+
+  if (stage.pending_current.length > 0) {
+    stageHTML += `<div class="card-hd" style="margin-bottom:10px">Current Stage — Items Pending Completion</div>`;
+    stage.pending_current.forEach(item => {
+      stageHTML += `<div class="risk-item">
+        <div class="risk-sev"><span class="badge badge-${item.sev === 'red' ? 'red' : 'amber'}">${item.sev === 'red' ? 'Blocker' : 'Pending'}</span></div>
+        <div class="risk-body">
+          <div class="risk-title">${item.task}</div>
+          <div class="risk-desc">${item.note}</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  if (stage.next_stage) {
+    stageHTML += `<div class="card-hd" style="margin:14px 0 10px">To Advance to <strong>${stage.next_stage}</strong> — Required Actions</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">`;
+    stage.next_items.forEach(item => {
+      stageHTML += `<div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--text2);padding:6px 8px;background:var(--surface);border-radius:5px;border:1px solid var(--line-light)">
+        <span style="color:var(--blue);font-weight:700;flex-shrink:0">→</span><span>${item}</span>
+      </div>`;
+    });
+    stageHTML += '</div>';
+  }
+
+  stageHTML += `<div class="card-hd" style="margin:14px 0 10px">Completed Milestones</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px">`;
+  stage.completed.forEach(item => {
+    stageHTML += `<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--green);padding:4px 9px;background:var(--green-bg);border-radius:20px"><span>✓</span><span>${item}</span></div>`;
+  });
+  stageHTML += '</div></div>';
+
+  html += stageHTML;
+  document.getElementById('engineering-content').innerHTML = html;
+}
+
+// ─── CHAT SCREEN ──────────────────────────────────────────────────────────────
+function renderChat() {
+  const d = DEALS[curDeal];
+  const res = calcModel();
+  const irrPre = (res.irr*100).toFixed(1)+'%';
+  
+  // Suggestions
+  const suggMap = {
+    apex:['Change PPA escalation to 2% starting Year 3','Run bear case: merchant price -15%','What DSCR if interest rate rises to 9.5%?','Increase O&M by 20% — all NC assets'],
+    clearwater:['Update yield to 1,850 hrs/yr (stressed)','Model inverter reserve funding gap','Run merchant price sensitivity -10%','Check O&M flip year impact on DSCR'],
+    bess:['What if arbitrage revenue is $15/kW-mo?','Model SOFR increase to 7.50%','Run IRR sensitivity if DSCR covenant waived','When does preferred equity get paid back?'],
+    sunridge:['Show top 5 sites by IRR','What if degradation accelerates to 0.70%?','Model NEM export rate reduction -20%','Portfolio-level EBITDA trend'],
+  };
+  document.getElementById('chat-suggestions').innerHTML = (suggMap[curDeal]||[]).map(s=>`<div class="suggestion" onclick="sendSugg(this)">${s}</div>`).join('');
+  
+  // Live state
+  const lsRows = [
+    {label:'Yield/Production',val:d.mwdc>0?`${d.yield} kWh/kWp`:`${d.mwdc===0&&curDeal==='sunridge'?'20.2 MWdc':'TBD'}`,src:'Doc'},
+    {label:'Availability',val:(d.avail*100).toFixed(1)+'%',src:'Doc'},
+    {label:'Degradation',val:(d.degrad*100).toFixed(2)+'%/yr',src:'Doc'},
+    {label:`OPEX (Yr 1 Total)`,val:`$${Math.round(Object.values(d.opex).reduce((a,b)=>a+b,0)).toLocaleString()}K`,src:'Doc'},
+    {label:'Interest Rate',val:d.loan>0?`${d.rate*100}% (SOFR+${(d.rate-0.055)*100}%)`:'N/A',src:'Doc'},
+    {label:'ITC Rate',val:(d.itc*100).toFixed(0)+'%',src:'Doc'},
+    {label:'Levered IRR',val:`<span class="pos bold" id="ls-irr">${irrPre}</span>`,src:'Calc'},
+    {label:'Min DSCR',val:`<span class="bold" id="ls-dscr">${res.minDSCR>0?res.minDSCR.toFixed(2)+'x':'N/A'}</span>`,src:'Calc'},
+    {label:'NPV @ 8%',val:`<span class="pos bold" id="ls-npv">$${Math.round(res.npvSum/1000).toLocaleString()}K</span>`,src:'Calc'},
+  ];
+  document.getElementById('live-state-body').innerHTML = lsRows.map(r=>`<tr><td>${r.label}</td><td class="num">${r.val}</td><td><span class="badge badge-${r.src==='Calc'?'teal':r.src==='Doc'?'blue':'amber'}">${r.src}</span></td></tr>`).join('');
+  
+  // Init message if empty
+  if (!document.getElementById('chat-msgs').children.length) {
+    addMsg(`Model loaded: <strong>${d.name}</strong> (${d.type}). ${d.files.length} documents parsed. Base case levered IRR is ${irrPre}. What would you like to adjust?`,'ai');
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-in');
+  const text = input.value.trim();
+  if (!text) return;
+  addMsg(text,'user');
+  input.value='';
+  const d = DEALS[curDeal];
+  setTimeout(()=>{
+    const match = (d.chat||[]).find(r=>r.trigger.test(text));
+    if (match) {
+      addMsg(match.reply,'ai',match.changes);
+      match.changes.forEach(ch=>addAuditEntry(ch.f,ch.from,ch.to,'Chat'));
+    } else {
+      addMsg(`Analyzed your request. For this adjustment to the <strong>${d.name}</strong> model, I recommend reviewing the flagged assumptions first. Try one of the suggested queries above, or be more specific about the assumption to change.`,'ai',[]);
+    }
+  },500);
+}
+function sendSugg(el){document.getElementById('chat-in').value=el.textContent;sendChat()}
+function addMsg(text,role,changes=[]){
+  const msgs=document.getElementById('chat-msgs');
+  const div=document.createElement('div');div.className='msg '+role;
+  const init=role==='user'?'AN':'SL';
+  let changeHTML=changes.map(c=>`<div class="msg-change"><span class="change-from">${c.from}</span><span class="change-arrow">→</span><span class="change-to">${c.to}</span></div>`).join('');
+  div.innerHTML=`<div class="msg-avatar ${role}">${init}</div><div class="msg-bubble">${text}${changeHTML}</div>`;
+  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
+}
+function addAuditEntry(field,from,to,by){
+  const trail=document.getElementById('audit-trail');
+  const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const div=document.createElement('div');div.className='audit-item';
+  div.innerHTML=`<span class="audit-ts">${by} · ${now}</span><div><div><span class="audit-field">${field}</span>: <span class="audit-from">${from}</span> → <span class="audit-to">${to}</span></div></div>`;
+  trail.insertBefore(div,trail.firstChild);
+}
+
+// ─── MEMO SCREEN ──────────────────────────────────────────────────────────────
+function renderMemo() {
+  const d = DEALS[curDeal];
+  const res = calcModel();
+  const irrPre = (res.irr*100).toFixed(1)+'%';
+  document.getElementById('memo-title').textContent = `Investment Memo — ${d.name}`;
+  const scoreColor = d.score>=80?'blue':d.score>=65?'amber':'red';
+  let html = `
+  <div class="memo-score">
+    <div class="score-ring" style="border-color:var(--${scoreColor})"><div class="score-n" style="color:var(--${scoreColor})">${d.score}</div><div class="score-d">/100</div></div>
+    <div class="score-txt"><h3>Overall Deal Score — ${d.scoreLabel}</h3><p>${getMemoSummaryLine(d,irrPre)}</p></div>
+  </div>
+  <div class="two-col mb16">
+    <div class="card"><div class="card-hd">Financial Summary</div>
+      ${d.askingPrice?`<div class="fin-row"><span class="fin-lbl">Asking Price</span><span class="fin-val">$${d.askingPrice.toLocaleString()}K</span></div>`:''}
+      ${d.dcfValue?`<div class="fin-row"><span class="fin-lbl">DCF Implied Value</span><span class="fin-val pos">$${d.dcfValue.toLocaleString()}K</span></div>`:''}
+      ${d.bidRec?`<div class="fin-row"><span class="fin-lbl">Recommended Bid</span><span class="fin-val pos">$${d.bidRec.toLocaleString()}K</span></div>`:''}
+      <div class="fin-row"><span class="fin-lbl">Levered IRR (Base)</span><span class="fin-val pos" id="memo-irr">${irrPre}</span></div>
+      <div class="fin-row"><span class="fin-lbl">NPV @ 8%</span><span class="fin-val pos">$${Math.round(res.npvSum/1000).toLocaleString()}K</span></div>
+      <div class="fin-row"><span class="fin-lbl">Min DSCR</span><span class="fin-val">${res.minDSCR>0?res.minDSCR.toFixed(2)+'x':'N/A'}</span></div>
+      <div class="fin-row"><span class="fin-lbl">Payback Period</span><span class="fin-val">${res.payback||'—'} years</span></div>
+      <div class="fin-row"><span class="fin-lbl">EBITDA Margin (avg)</span><span class="fin-val">${(d.ebitdaMargin*100).toFixed(1)}%</span></div>
+    </div>
+    <div class="card"><div class="card-hd">Risk Summary</div>
+      ${getMemoRiskRows(d)}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd">Investment Thesis</div>
+    ${getMemoText(d,irrPre)}
+  </div>`;
+  document.getElementById('memo-content').innerHTML = html;
+}
+
+function getMemoSummaryLine(d,irr) {
+  const lines = {
+    apex: `Portfolio trades at 13% discount to DCF value. Three medium-severity engineering flags require resolution or price adjustment. Recommended bid: <strong>$96.25M</strong>.`,
+    clearwater: `Operating asset with strong production history. IRR ${irr} comfortably exceeds ${(d.irrTarget*100).toFixed(0)}% hurdle. Strong buy.`,
+    bess: `Revenue model incomplete pending final IA. Do not proceed until scheduled revenue confirmed. IRR un-confirmable.`,
+    sunridge: `27-site California C&I portfolio outperforming P50 by +2.1%. No critical findings. Recommend proceeding to final diligence.`,
+  };
+  return lines[curDeal]||'See detailed analysis below.';
+}
+function getMemoRiskRows(d) {
+  const configs = {
+    apex:`<div class="fin-row"><span class="fin-lbl">Total Risk (NPV)</span><span class="fin-val warn">($990K)</span></div><div class="fin-row"><span class="fin-lbl">Critical Findings</span><span class="fin-val">0</span></div><div class="fin-row"><span class="fin-lbl">Major Findings</span><span class="fin-val warn">3</span></div><div class="fin-row"><span class="fin-lbl">Inverter Re-Study</span><span class="fin-val warn">Pending</span></div><div class="fin-row"><span class="fin-lbl">ITC Recapture Risk</span><span class="fin-val pos">None</span></div><div class="fin-row"><span class="fin-lbl">Safe Harbor Status</span><span class="fin-val pos">Confirmed</span></div>`,
+    clearwater:`<div class="fin-row"><span class="fin-lbl">Actual vs P50</span><span class="fin-val pos">+2.1%</span></div><div class="fin-row"><span class="fin-lbl">Critical Findings</span><span class="fin-val pos">0</span></div><div class="fin-row"><span class="fin-lbl">Major Findings</span><span class="fin-val">1</span></div><div class="fin-row"><span class="fin-lbl">Inverter Reserve</span><span class="fin-val warn">Verify</span></div><div class="fin-row"><span class="fin-lbl">Degradation</span><span class="fin-val pos">On curve</span></div>`,
+    bess:`<div class="fin-row"><span class="fin-lbl">Revenue Confirmed</span><span class="fin-val warn">No</span></div><div class="fin-row"><span class="fin-lbl">Critical Findings</span><span class="fin-val">0</span></div><div class="fin-row"><span class="fin-lbl">Major Findings</span><span class="fin-val warn">2</span></div><div class="fin-row"><span class="fin-lbl">DSCR Headroom</span><span class="fin-val warn">Thin</span></div><div class="fin-row"><span class="fin-lbl">ITC Rate</span><span class="fin-val pos">40%</span></div>`,
+    sunridge:`<div class="fin-row"><span class="fin-lbl">Fleet Availability</span><span class="fin-val pos">98.7%</span></div><div class="fin-row"><span class="fin-lbl">Critical Findings</span><span class="fin-val pos">0</span></div><div class="fin-row"><span class="fin-lbl">Major Findings</span><span class="fin-val pos">0</span></div><div class="fin-row"><span class="fin-lbl">Contract Expiries (5yr)</span><span class="fin-val pos">None</span></div><div class="fin-row"><span class="fin-lbl">Degradation vs Budget</span><span class="fin-val pos">On curve</span></div>`,
+  };
+  return configs[curDeal]||'';
+}
+function getMemoText(d,irr) {
+  const texts = {
+    apex:`<div class="memo-block"><div class="memo-lbl">Executive Summary</div><div class="memo-txt">The Apex Solar Portfolio is an 82 MWdc utility-scale solar asset in Southeast Region, interconnected to the regional utility operator. At the asking price of $110M, the asset trades at a 13% discount to our base-case DCF value of $126.5M. A confirmed 5-year PPA with the utility at $59/MWh and a 40% ITC via Safe Harbor underpin the financial case. Three medium-severity engineering issues require resolution before close.</div></div><div class="memo-block"><div class="memo-lbl">Financial Assessment</div><div class="memo-txt">Base-case levered IRR of ${irr} pre-tax exceeds the 10.0% hurdle by 290 bps. The PPA expires in Year 5 (2034), after which revenue transitions to merchant pricing at $65/MWh escalating at 1.5%/yr — the primary revenue risk. DSCR floors at 1.62x in Year 1, well above the 1.25x covenant. The 40% ITC generates approximately $57M in tax credit transfer proceeds at COD.</div></div><div class="memo-block" style="border:none"><div class="memo-lbl">Recommendation</div><div class="memo-txt">Proceed with a bid of <strong>$96.25M</strong> — 12.5% below asking price — contingent on: (1) EPC filing inverter change notification with the utility before signing; (2) GSU transformer delivery confirmation by June 2026; (3) seller providing a PPA renewal right for the post-2034 merchant period.</div></div>`,
+    clearwater:`<div class="memo-block"><div class="memo-lbl">Executive Summary</div><div class="memo-txt">Clearwater is an operating solar asset in ISO New England with a 3-year track record of production at +2.1% above P50. The asset benefits from multiple revenue streams including energy (ATC), RECs, and capacity market (ELCC). At current pricing, levered IRR of ${irr} comfortably exceeds the 12% hurdle rate.</div></div><div class="memo-block"><div class="memo-lbl">Recommendation</div><div class="memo-txt">Proceed to final bid. Confirm inverter reserve funding balance before close. Request updated Aurora curves for REC and capacity markets. Price due diligence findings into the bid via a modest holdback tied to Year 7 inverter replacement costs.</div></div>`,
+    bess:`<div class="memo-block"><div class="memo-lbl">Executive Summary</div><div class="memo-txt">Project Genesis is a 4-site BESS portfolio in Massachusetts and New York with SOFR+5.50% debt. The financial model cannot be confirmed until final interconnection agreements are executed and scheduled revenue curves are validated. The deal has high upside if arbitrage and ancillary revenues meet projections, but material downside if they disappoint.</div></div><div class="memo-block" style="border:none"><div class="memo-lbl">Recommendation</div><div class="memo-txt"><strong>Do not proceed</strong> until: (1) All 4 final IAs signed with confirmed COD milestones; (2) Scheduled revenue amounts confirmed; (3) DSCR sensitivity tested at -10% and -20% revenue scenarios to confirm covenant compliance.</div></div>`,
+    sunridge:`<div class="memo-block"><div class="memo-lbl">Executive Summary</div><div class="memo-txt">The Sunridge C&I Portfolio is a 27-site, 20.2 MWdc C&I solar fleet in California with a proven 3-year operating track record. The portfolio is outperforming its P50 energy model by +2.1%, degradation is on curve, and no sites have critical findings. Fleet availability of 98.7% exceeds the O&M SLA requirement.</div></div><div class="memo-block" style="border:none"><div class="memo-lbl">Recommendation</div><div class="memo-txt">Strong buy. Proceed to final diligence. Focus remaining work on: (1) Validating per-site revenue contract terms and escalation schedules; (2) Confirming inverter ages and replacement reserves; (3) Reviewing NEM policy risk for California assets.</div></div>`,
+  };
+  return texts[curDeal]||'';
+}
+
+// ─── SCENARIO ─────────────────────────────────────────────────────────────────
+function setScen(s,el){
+  curScen=s;
+  document.querySelectorAll('.scen-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  recalc();
+}
+
+// ─── FILE UPLOAD & RE-UPLOAD ──────────────────────────────────────────────────
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const files = event.dataTransfer.files;
+  processFiles(files);
+}
+function handleFileInput(event) {
+  processFiles(event.target.files);
+}
+function processFiles(files) {
+  Array.from(files).forEach(file => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (['xlsx','xlsm'].includes(ext)) {
+      // Try to read as Excel and sync back assumptions
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, {type:'array'});
+          syncFromExcel(wb, file.name);
+        } catch(err) {
+          showNotif(`Parsed: ${file.name}`);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      showNotif(`Added: ${file.name}`);
+      // Add to file list
+      const d = DEALS[curDeal];
+      d.files.push({name:file.name,fields:'Processing...',status:'amber',conf:85});
+      renderUpload();
+    }
+  });
+}
+function syncFromExcel(wb, filename) {
+  // Try to read key assumptions from re-uploaded Excel
+  const d = DEALS[curDeal];
+  let updated = [];
+  
+  // Look for Inputs sheet or Dashboard
+  const inputSheet = wb.Sheets['Inputs'] || wb.Sheets['Dashboard'] || wb.Sheets['Inputs>>'] || wb.Sheets['Scenario Manager'];
+  if (inputSheet) {
+    const data = XLSX.utils.sheet_to_json(inputSheet, {header:1});
+    data.forEach(row => {
+      if (!row) return;
+      const rowStr = row.join('\t').toLowerCase();
+      // Try to find key values
+      if (rowStr.includes('ppa price') || rowStr.includes('ppa rate')) {
+        const num = row.find(v=>typeof v==='number'&&v>0&&v<500);
+        if (num && Math.abs(num-d.ppa)>0.01) { updated.push(`PPA Price: ${d.ppa} → ${num}`); d.ppa=num; }
+      }
+      if (rowStr.includes('degradation')) {
+        const num = row.find(v=>typeof v==='number'&&v>0&&v<0.1);
+        if (num && Math.abs(num-d.degrad)>0.0001) { updated.push(`Degradation: ${(d.degrad*100).toFixed(2)}% → ${(num*100).toFixed(2)}%`); d.degrad=num; }
+      }
+      if (rowStr.includes('availability factor') || rowStr.includes('availability\t')) {
+        const num = row.find(v=>typeof v==='number'&&v>0.5&&v<=1);
+        if (num && Math.abs(num-d.avail)>0.001) { updated.push(`Availability: ${(d.avail*100).toFixed(1)}% → ${(num*100).toFixed(1)}%`); d.avail=num; }
+      }
+      if ((rowStr.includes('merchant price') || rowStr.includes('merch')) && !rowStr.includes('escalation')) {
+        const num = row.find(v=>typeof v==='number'&&v>20&&v<500);
+        if (num && Math.abs(num-d.merch)>0.01) { updated.push(`Merchant Price: $${d.merch} → $${num}`); d.merch=num; }
+      }
+    });
+  }
+  
+  if (updated.length>0) {
+    showNotif(`✓ Synced ${updated.length} changes from ${filename}`);
+    updated.forEach(u=>addAuditEntry('Re-upload sync', u.split(':')[1].trim().split(' →')[0], u.split('→')[1].trim(), 'Upload'));
+    recalc();
+    renderAssumptions();
+  } else {
+    showNotif(`Loaded: ${filename} (no assumption changes detected)`);
+  }
+  
+  // Update file list to show re-uploaded file
+  d.files = d.files.filter(f=>f.name!==filename);
+  d.files.unshift({name:filename+'  ↑ Re-uploaded',fields:`Synced ${updated.length} changes`,status:'green',conf:99});
+  renderUpload();
+}
+
+// ─── EXCEL EXPORT ─────────────────────────────────────────────────────────────
+function exportExcel() {
+  const d = DEALS[curDeal];
+  const res = calcModel();
+  const wb = XLSX.utils.book_new();
+  
+  // COVER sheet
+  const coverData = [
+    ['SolarLedger','Solar M&A Financial Model'],
+    ['',''],
+    ['Deal Name:', d.name],
+    ['Type:', d.type],
+    ['Location:', d.location],
+    ['Grid Operator:', d.gridOp],
+    ['Generated:', new Date().toLocaleDateString()],
+    ['',''],
+    ['Color Key',''],
+    ['Blue text','Hardcoded input / assumption'],
+    ['Black text','Formula / calculated value'],
+    ['Green text','Link from another sheet'],
+    ['Yellow fill','Flagged assumption — review required'],
+  ];
+  const coverSheet = XLSX.utils.aoa_to_sheet(coverData);
+  XLSX.utils.book_append_sheet(wb, coverSheet, 'Cover');
+  
+  // DASHBOARD sheet
+  const dashData = [
+    ['Summary Dashboard — '+d.name],
+    [''],
+    ['Key Project Parameters','','','',''],
+    ['Asset Name', d.name, '', 'Grid Operator', d.gridOp],
+    ['MW dc', d.mwdc||'N/A', '', 'MW ac', d.mwac||'N/A'],
+    ['Annual Yield (kWh/kWp)', d.yield||'N/A', '', 'Availability Factor', d.avail||'N/A'],
+    ['Annual Degradation', d.degrad||'N/A', '', 'Asset Life (years)', d.life],
+    ['COD / Status', d.cod, '', '', ''],
+    [''],
+    ['Capitalization','','','',''],
+    ['Total Unlevered CapEx ($\'000)', d.capex||0, '', 'Term Loan ($\'000)', d.loan||0],
+    ['FMV ($\'000)', d.fmv||0, '', 'Interest Rate', d.rate||0],
+    ['Total ITC (%)', d.itc, '', 'Preferred Equity ($\'000)', d.prefEquity||0],
+    [''],
+    ['Returns (Base Case)','','','',''],
+    ['Levered IRR (Pre-Tax)', (res.irr*100).toFixed(2)+'%', '', 'NPV @ 8% ($\'000)', Math.round(res.npvSum/1000)],
+    ['Min DSCR', res.minDSCR>0?res.minDSCR.toFixed(3):'N/A', '', 'Payback Period', (res.payback||'—')+' years'],
+    ['EBITDA Margin (avg)', (d.ebitdaMargin*100).toFixed(1)+'%', '', '', ''],
+  ];
+  const dashSheet = XLSX.utils.aoa_to_sheet(dashData);
+  XLSX.utils.book_append_sheet(wb, dashSheet, 'Dashboard');
+  
+  // INPUTS sheet
+  const inputsData = [
+    ['Model Assumptions — '+d.name],
+    [''],
+    ['A. Project Technical Parameters','',''],
+    ['Asset Name', d.name],
+    ['Grid Operator / Utility', d.gridOp],
+    ['MW dc (Nameplate)', d.mwdc||'N/A', 'MWdc'],
+    ['MW ac (POI Capacity)', d.mwac||'N/A', 'MWac'],
+    ['Annual Yield', d.yield||'N/A', 'kWh/kWp'],
+    ['Availability Factor', d.avail||'N/A', '%'],
+    ['Annual Degradation Rate', d.degrad||'N/A', '% / yr'],
+    ['COD Date', d.cod],
+    ['Asset Life', d.life, 'years'],
+    [''],
+    ['B. Revenue Assumptions','',''],
+    ['PPA Price (Year 1)', d.ppa||'N/A', '$/MWh'],
+    ['PPA Escalation Rate', d.ppaEsc||0, '% / yr'],
+    ['PPA Tenor', d.ppaTenor||0, 'years'],
+    ['Merchant Price (Year 1)', d.merch||'N/A', '$/MWh'],
+    ['Merchant Escalation', d.merchEsc||0, '% / yr'],
+    ['Curtailment Factor', d.curtail||0, '%'],
+    [''],
+    ['C. CAPEX & Capital Structure','',''],
+    ['Total Unlevered CapEx ($\'000)', d.capex||0],
+    ['Term Loan ($\'000)', d.loan||0],
+    ['Interest Rate', d.rate||0, '%'],
+    ['Loan Tenor', d.tenor||0, 'years'],
+    ['Total ITC (%)', d.itc],
+    ['FMV ($\'000)', d.fmv||0],
+    [''],
+    ['D. OPEX Assumptions (Year 1 $\'000)','','Escalation'],
+    ...Object.entries(d.opex).map(([k,v])=>[k, v, d.opexEsc[k]||0]),
+    ['TOTAL OPEX', Object.values(d.opex).reduce((a,b)=>a+b,0)],
+  ];
+  const inputsSheet = XLSX.utils.aoa_to_sheet(inputsData);
+  XLSX.utils.book_append_sheet(wb, inputsSheet, 'Inputs');
+  
+  // REVENUE sheet
+  const sel = getSelYrs(d.life);
+  const revHeader = ['Line Item', ...sel.map(i=>`Year ${i+1}`)];
+  const revData = [revHeader];
+  const revRows = [
+    ['Net Generation (MWh)', ...sel.map(i=>res.yrs[i]?Math.round(res.yrs[i].net):0)],
+    [`Contracted Revenue ($'000)`, ...sel.map(i=>res.yrs[i]&&i<d.ppaTenor?Math.round(res.yrs[i].rev):0)],
+    [`Merchant/Other Revenue ($'000)`, ...sel.map(i=>res.yrs[i]&&i>=d.ppaTenor?Math.round(res.yrs[i].rev):0)],
+    [`TOTAL GROSS REVENUE ($'000)`, ...sel.map(i=>res.yrs[i]?Math.round(res.yrs[i].rev):0)],
+    [`(-) Total OPEX ($'000)`, ...sel.map(i=>res.yrs[i]?-Math.round(res.yrs[i].opexTotal):0)],
+    [`EBITDA ($'000)`, ...sel.map(i=>res.yrs[i]?Math.round(res.yrs[i].ebitda):0)],
+    [`EBITDA Margin (%)`, ...sel.map(i=>res.yrs[i]&&res.yrs[i].rev>0?parseFloat((res.yrs[i].ebitda/res.yrs[i].rev*100).toFixed(2)):0)],
+  ];
+  const revSheet = XLSX.utils.aoa_to_sheet([...revData,...revRows]);
+  XLSX.utils.book_append_sheet(wb, revSheet, 'Revenue');
+  
+  // OPEX sheet
+  const opexLabels = {pvo:'PV O&M',util:'Utility O&M',para:'Parasitic Load',uncov:'Uncovered O&M',tel:'Telecom',ins:'Insurance',am:'Asset Mgmt',at:'Audit & Tax',lc:'LC/Fin Fees',inv:'Inverter Reserve',other:'Other OPEX',lease:'Operating Lease'};
+  const opexSel = [0,4,9,14,19,d.life-1].filter((v,i,a)=>v<d.life&&a.indexOf(v)===i);
+  const opexHeader = ['Line Item','Escalation', ...opexSel.map(i=>`Year ${i+1}`)];
+  const opexRows = [opexHeader];
+  Object.entries(d.opex).forEach(([k,v])=>{
+    if (v>0) opexRows.push([opexLabels[k]||k, d.opexEsc[k]||0, ...opexSel.map(i=>Math.round(v*Math.pow(1+(d.opexEsc[k]||0),i)))]);
+  });
+  opexRows.push([`TOTAL OPEX ($'000)`,'', ...opexSel.map(i=>res.yrs[i]?Math.round(res.yrs[i].opexTotal):0)]);
+  const opexSheet = XLSX.utils.aoa_to_sheet(opexRows);
+  XLSX.utils.book_append_sheet(wb, opexSheet, 'OPEX');
+  
+  // DEBT sheet
+  if (d.loan>0) {
+    const debtSel = [0,4,9,14,19].filter(i=>i<d.life);
+    const debtRows = [
+      [`Debt Schedule & DSCR — ${d.name}`],
+      [''],
+      ['Line Item', ...debtSel.map(i=>`Year ${i+1}`)],
+      [`Beginning Balance ($'000)`, ...debtSel.map(i=>res.yrs[i]?Math.round(res.yrs[i].begBal):0)],
+      ['Amortization', ...debtSel.map(i=>res.yrs[i]?Math.round(res.yrs[i].amort):0)],
+      ['Interest Expense', ...debtSel.map(i=>res.yrs[i]?-Math.round(res.yrs[i].intExp):0)],
+      ['Total Debt Service', ...debtSel.map(i=>res.yrs[i]?-Math.round(res.yrs[i].ds):0)],
+      [`EBITDA ($'000)`, ...debtSel.map(i=>res.yrs[i]?Math.round(res.yrs[i].ebitda):0)],
+      [`CFADS ($'000)`, ...debtSel.map(i=>res.yrs[i]?Math.round(res.yrs[i].cfads):0)],
+      ['DSCR', ...debtSel.map(i=>res.yrs[i]&&res.yrs[i].dscr>0?parseFloat(res.yrs[i].dscr.toFixed(3)):0)],
+    ];
+    const debtSheet = XLSX.utils.aoa_to_sheet(debtRows);
+    XLSX.utils.book_append_sheet(wb, debtSheet, 'Debt');
+  }
+  
+  // RETURNS sheet
+  const returnsData = [
+    [`Returns Summary — ${d.name}`],
+    [''],
+    ['Scenario', 'Base', 'Bull', 'Bear'],
+    ['Levered IRR (Pre-Tax)', `${(d.baseIRR*100).toFixed(2)}%`, `${(d.baseIRR*1.10*100).toFixed(2)}%`, `${(d.baseIRR*0.82*100).toFixed(2)}%`],
+    ['Levered IRR (Post-Tax)', `${(d.baseIRR*0.83*100).toFixed(2)}%`, `${(d.baseIRR*0.83*1.10*100).toFixed(2)}%`, `${(d.baseIRR*0.83*0.82*100).toFixed(2)}%`],
+    ['Unlevered IRR (Pre-Tax)', `${(d.baseIRR*0.945*100).toFixed(2)}%`, `${(d.baseIRR*0.945*1.10*100).toFixed(2)}%`, `${(d.baseIRR*0.945*0.82*100).toFixed(2)}%`],
+    ['NPV @ 8% ($\'000, base)', Math.round(res.npvSum/1000)],
+    ['Min DSCR (base)', res.minDSCR>0?res.minDSCR.toFixed(3):'N/A'],
+    ['Payback Period', (res.payback||'—')+' years'],
+    ['EBITDA Margin (avg)', `${(d.ebitdaMargin*100).toFixed(1)}%`],
+  ];
+  const returnsSheet = XLSX.utils.aoa_to_sheet(returnsData);
+  XLSX.utils.book_append_sheet(wb, returnsSheet, 'Returns');
+  
+  const filename = `SolarLedger_${d.name.replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showNotif(`✓ Exported: ${filename}`);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+function checkAuth() {
+  if (!sessionStorage.getItem('sl_auth')) {
+    window.location.href = 'login.html';
+    return false;
+  }
+  return true;
+}
+function doLogout() {
+  sessionStorage.removeItem('sl_auth');
+  sessionStorage.removeItem('sl_user');
+  sessionStorage.removeItem('sl_firm');
+  window.location.href = 'login.html';
+}
+
+// ─── USER BAR ─────────────────────────────────────────────────────────────────
+function initUserBar() {
+  const user = sessionStorage.getItem('sl_user') || 'Demo User';
+  const firm = sessionStorage.getItem('sl_firm') || 'Arcadian Infrastructure Partners';
+  const initials = user.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('sb-name').textContent = user;
+  document.getElementById('sb-firm').textContent = firm;
+  document.getElementById('sb-avatar').textContent = initials;
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function initDashboard() {
+  const user = sessionStorage.getItem('sl_user') || 'Demo User';
+  const firm = sessionStorage.getItem('sl_firm') || 'Arcadian Infrastructure Partners';
+  const firstName = user.split(' ')[0];
+  const now = new Date();
+  const hour = now.getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const dateStr = now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('dash-greeting').textContent = `${greet}, ${firstName}.`;
+  document.getElementById('dash-date').textContent = `${dateStr} · ${firm}`;
+
+  // Timestamp
+  document.getElementById('pw-timestamp').textContent = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+
+  // Build mini bar charts
+  buildMiniChart('chart-sunridge', [14.2,15.8,16.1,17.4,16.9,18.0,17.6,18.4], '#1565C7');
+  buildMiniChart('chart-clearwater', [19.1,20.4,21.2,22.8,22.1,23.6,23.9,24.1], '#2E7D32');
+}
+
+function buildMiniChart(id, data, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const max = Math.max(...data);
+  const labels = ['Mo','Tu','We','Th','Fr','Sa','Su','Now'];
+  el.innerHTML = '';
+  data.forEach((v, i) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px';
+    const bar = document.createElement('div');
+    bar.className = 'pw-bar';
+    bar.style.cssText = `height:${Math.max((v/max)*44,3)}px;background:${i===data.length-1?color:'rgba(21,101,199,0.25)'};border-radius:2px 2px 0 0;width:100%;transition:height .4s ease ${i*30}ms`;
+    const lbl = document.createElement('div');
+    lbl.className = 'pw-bar-lbl';
+    lbl.textContent = labels[i];
+    wrap.appendChild(bar);
+    wrap.appendChild(lbl);
+    el.appendChild(wrap);
+  });
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+if (checkAuth()) {
+  initUserBar();
+  renderUpload();
+  setTimeout(() => {
+    const dashBtn = document.querySelector('.nav-item');
+    go('dashboard', dashBtn);
+  }, 0);
+}
+</script>
+</body>
+</html>
