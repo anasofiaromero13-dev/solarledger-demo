@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarLedger — Solar M&A Due Diligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0A0F1E;
+  --ink2:#1C2540;
+  --ink3:#3D4F6E;
+  --ink4:#7A8BA8;
+  --gold:#C8973A;
+  --gold-light:#F0D080;
+  --gold-pale:#FBF5E6;
+  --blue:#1560BD;
+  --blue-mid:#1A6FD4;
+  --blue-pale:#EEF4FF;
+  --line:#E2E8F3;
+  --surface:#F7F9FC;
+  --white:#FFFFFF;
+  --serif:'Playfair Display',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --r:8px;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--white);color:var(--ink);overflow-x:hidden}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);transition:box-shadow .3s}
+nav.scrolled{box-shadow:0 2px 20px rgba(0,0,0,.07)}
+.nav-logo{font-family:var(--serif);font-size:22px;color:var(--ink);letter-spacing:-0.01em;text-decoration:none}
+.nav-logo em{font-style:italic;color:var(--blue)}
+.nav-links{display:flex;align-items:center;gap:32px}
+.nav-links a{font-size:13px;font-weight:500;color:var(--ink3);text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--ink)}
+.nav-ctas{display:flex;gap:10px;align-items:center}
+.btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 18px;border-radius:var(--r);cursor:pointer;border:none;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-ghost{background:transparent;color:var(--ink3);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--ink3);color:var(--ink)}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-primary:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(10,15,30,.2)}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:#b8862e;transform:translateY(-1px);box-shadow:0 4px 12px rgba(200,151,58,.3)}
+.btn-lg{font-size:14px;padding:12px 28px;border-radius:var(--r)}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:100px 40px 80px;position:relative;overflow:hidden;background:var(--ink)}
+.hero-bg{position:absolute;inset:0;background:
+  radial-gradient(ellipse 80% 60% at 70% 40%, rgba(21,96,189,0.18) 0%, transparent 60%),
+  radial-gradient(ellipse 50% 40% at 20% 70%, rgba(200,151,58,0.08) 0%, transparent 50%),
+  linear-gradient(160deg, #0A0F1E 0%, #0D1628 50%, #0A1420 100%);
+}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 0%,transparent 100%)}
+.hero-inner{position:relative;z-index:2;max-width:1100px;margin:0 auto;width:100%}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px;padding:6px 14px;border:1px solid rgba(200,151,58,.25);border-radius:20px;background:rgba(200,151,58,.06)}
+.hero-eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-family:var(--serif);font-size:clamp(42px,5.5vw,72px);font-weight:400;color:#fff;line-height:1.1;letter-spacing:-0.02em;margin-bottom:24px;max-width:760px}
+.hero h1 em{font-style:italic;color:var(--gold-light)}
+.hero-sub{font-size:17px;color:rgba(255,255,255,.5);line-height:1.7;max-width:520px;margin-bottom:44px;font-weight:300}
+.hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:72px}
+.hero-stats{display:flex;gap:48px;padding-top:40px;border-top:1px solid rgba(255,255,255,.08)}
+.hero-stat-val{font-family:var(--mono);font-size:26px;font-weight:500;color:#fff;letter-spacing:-0.02em}
+.hero-stat-lbl{font-size:11px;color:rgba(255,255,255,.3);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+
+/* floating card */
+.hero-card{position:absolute;right:60px;top:50%;transform:translateY(-50%);width:320px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:20px;backdrop-filter:blur(10px);animation:floatCard 4s ease-in-out infinite}
+@keyframes floatCard{0%,100%{transform:translateY(-50%) translateY(0)}50%{transform:translateY(-50%) translateY(-10px)}}
+.hc-label{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.hc-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}
+.hc-row:last-child{border-bottom:none}
+.hc-name{color:rgba(255,255,255,.5)}
+.hc-val{font-family:var(--mono);font-weight:500}
+.hc-green{color:#66BB6A}
+.hc-blue{color:#64B5F6}
+.hc-amber{color:#FFA726}
+.hc-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600}
+.hcb-g{background:rgba(102,187,106,.15);color:#66BB6A}
+.hcb-a{background:rgba(255,167,38,.15);color:#FFA726}
+.hc-divider{height:1px;background:rgba(255,255,255,.06);margin:10px 0}
+
+/* ── LOGOS ── */
+.logos{padding:40px;background:var(--surface);border-bottom:1px solid var(--line)}
+.logos-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:48px;flex-wrap:wrap}
+.logos-label{font-size:11px;color:var(--ink4);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;font-weight:500}
+.logos-list{display:flex;gap:40px;align-items:center;flex-wrap:wrap}
+.logo-item{font-family:var(--mono);font-size:12px;color:var(--ink4);font-weight:500;opacity:.6}
+
+/* ── SECTIONS ── */
+section{padding:100px 40px}
+.section-inner{max-width:1100px;margin:0 auto}
+.section-eyebrow{font-family:var(--mono);font-size:10px;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+.section-title{font-family:var(--serif);font-size:clamp(32px,3.5vw,48px);font-weight:400;color:var(--ink);line-height:1.15;letter-spacing:-0.02em;margin-bottom:16px}
+.section-title em{font-style:italic}
+.section-sub{font-size:15px;color:var(--ink3);line-height:1.7;max-width:560px;font-weight:300}
+
+/* ── PROBLEM ── */
+.problem{background:var(--ink);color:#fff}
+.problem .section-eyebrow{color:var(--gold)}
+.problem .section-title{color:#fff}
+.problem .section-sub{color:rgba(255,255,255,.45)}
+.problem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:56px;background:rgba(255,255,255,.06);border-radius:12px;overflow:hidden}
+.problem-item{background:rgba(255,255,255,.02);padding:32px 28px}
+.problem-num{font-family:var(--mono);font-size:32px;font-weight:500;color:var(--gold);margin-bottom:10px;line-height:1}
+.problem-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:8px}
+.problem-desc{font-size:13px;color:rgba(255,255,255,.4);line-height:1.65}
+
+/* ── HOW IT WORKS ── */
+.steps{display:flex;flex-direction:column;gap:0;margin-top:56px}
+.step{display:grid;grid-template-columns:80px 1fr;gap:32px;padding:36px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:none}
+.step-num{font-family:var(--serif);font-size:48px;color:var(--line);font-weight:400;line-height:1;padding-top:4px}
+.step-body h3{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.step-body p{font-size:13px;color:var(--ink3);line-height:1.65;max-width:560px}
+.step-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.step-tag{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:20px;background:var(--blue-pale);color:var(--blue);font-weight:500}
+
+/* ── FEATURES ── */
+.features-bg{background:var(--surface)}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:56px}
+.feature-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:28px 24px;transition:all .25s}
+.feature-card:hover{border-color:#93C5FD;box-shadow:0 8px 32px rgba(21,96,189,.08);transform:translateY(-2px)}
+.feature-icon{width:40px;height:40px;border-radius:10px;background:var(--blue-pale);display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:18px}
+.feature-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:7px}
+.feature-desc{font-size:12px;color:var(--ink3);line-height:1.65}
+
+/* ── PRICING ── */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:56px}
+.price-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:32px 28px}
+.price-card.featured{background:var(--ink);border-color:var(--ink);color:#fff;transform:scale(1.02)}
+.price-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink4);margin-bottom:10px}
+.price-card.featured .price-label{color:rgba(255,255,255,.4)}
+.price-amount{font-family:var(--mono);font-size:36px;font-weight:500;color:var(--ink);letter-spacing:-0.03em;line-height:1;margin-bottom:4px}
+.price-card.featured .price-amount{color:#fff}
+.price-period{font-size:12px;color:var(--ink4);margin-bottom:20px}
+.price-card.featured .price-period{color:rgba(255,255,255,.35)}
+.price-desc{font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.price-card.featured .price-desc{color:rgba(255,255,255,.45);border-bottom-color:rgba(255,255,255,.1)}
+.price-features{display:flex;flex-direction:column;gap:8px;margin-bottom:28px}
+.price-feature{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--ink3)}
+.price-card.featured .price-feature{color:rgba(255,255,255,.55)}
+.price-check{color:var(--blue);font-size:12px;flex-shrink:0;margin-top:1px}
+.price-card.featured .price-check{color:var(--gold)}
+.price-card .btn{width:100%;justify-content:center}
+
+/* ── CTA SECTION ── */
+.cta-section{background:var(--ink);padding:100px 40px;text-align:center}
+.cta-section .section-title{color:#fff;margin:0 auto 16px}
+.cta-section .section-sub{color:rgba(255,255,255,.4);margin:0 auto 40px}
+.cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* ── FOOTER ── */
+footer{background:var(--ink2);padding:40px;border-top:1px solid rgba(255,255,255,.06)}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+.footer-logo{font-family:var(--serif);font-size:18px;color:rgba(255,255,255,.5)}
+.footer-logo em{font-style:italic;color:rgba(255,255,255,.3)}
+.footer-copy{font-size:11px;color:rgba(255,255,255,.2)}
+
+/* ── ANIMATIONS ── */
+.fade-up{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.fade-up.visible{opacity:1;transform:translateY(0)}
+.fade-up-delay-1{transition-delay:.1s}
+.fade-up-delay-2{transition-delay:.2s}
+.fade-up-delay-3{transition-delay:.3s}
+
+@media(max-width:900px){
+  .hero-card{display:none}
+  .problem-grid{grid-template-columns:1fr}
+  .features-grid{grid-template-columns:1fr 1fr}
+  .pricing-grid{grid-template-columns:1fr}
+  .price-card.featured{transform:none}
+  nav{padding:0 20px}
+  .hero{padding:100px 20px 60px}
+  section{padding:64px 20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav id="nav">
+  <a href="index.html" class="nav-logo">Solar<em>Ledger</em></a>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+  <div class="nav-ctas">
+    <a href="https://calendly.com/placeholder" target="_blank" class="btn btn-ghost">Book a Demo</a>
+    <a href="login.html" class="btn btn-primary">Log In →</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div class="hero-eyebrow"><span class="hero-eyebrow-dot"></span>Solar M&A Due Diligence Platform</div>
+    <h1>From data room<br>to decision in <em>hours,<br>not weeks.</em></h1>
+    <p class="hero-sub">SolarLedger ingests your deal documents, builds an institutional-grade financial model, and surfaces every risk — so your team can focus on the decision, not the spreadsheet.</p>
+    <div class="hero-ctas">
+      <a href="https://calendly.com/placeholder" target="_blank" class="btn btn-gold btn-lg">Book a Demo</a>
+      <a href="login.html" class="btn btn-lg" style="background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15)">Log In →</a>
+    </div>
+    <div class="hero-stats">
+      <div>
+        <div class="hero-stat-val">200 GW+</div>
+        <div class="hero-stat-lbl">US solar capacity</div>
+      </div>
+      <div>
+        <div class="hero-stat-val">$50K+</div>
+        <div class="hero-stat-lbl">Avg. traditional diligence</div>
+      </div>
+      <div>
+        <div class="hero-stat-val">4–8 wks</div>
+        <div class="hero-stat-lbl">Typical buyer timeline</div>
+      </div>
+      <div>
+        <div class="hero-stat-val" style="color:var(--gold-light)">Hours</div>
+        <div class="hero-stat-lbl">With SolarLedger</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating deal card -->
+  <div class="hero-card">
+    <div class="hc-label">Live Deal Analysis — Apex Solar Portfolio</div>
+    <div class="hc-row">
+      <span class="hc-name">Levered IRR (pre-tax)</span>
+      <span class="hc-val hc-blue">12.9%</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-name">NPV @ 8%</span>
+      <span class="hc-val hc-green">$28.1M</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-name">Min DSCR</span>
+      <span class="hc-val hc-blue">1.62x</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-name">ITC Rate</span>
+      <span class="hc-val hc-green">40%</span>
+    </div>
+    <div class="hc-divider"></div>
+    <div class="hc-row">
+      <span class="hc-name">Deal Score</span>
+      <span class="hc-badge hcb-a">74 / 100</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-name">Recommended Bid</span>
+      <span class="hc-val hc-amber">$96.25M</span>
+    </div>
+    <div class="hc-row">
+      <span class="hc-name">Asking Price</span>
+      <span class="hc-val" style="color:rgba(255,255,255,.3);text-decoration:line-through">$110M</span>
+    </div>
+    <div class="hc-divider"></div>
+    <div style="font-size:10px;color:rgba(255,255,255,.2);font-family:var(--mono);text-align:right">8 docs parsed · 47 assumptions extracted</div>
+  </div>
+</section>
+
+<!-- ── LOGOS ── -->
+<div class="logos">
+  <div class="logos-inner">
+    <div class="logos-label">Built for teams working with</div>
+    <div class="logos-list">
+      <span class="logo-item">ERCOT</span>
+      <span class="logo-item">PJM</span>
+      <span class="logo-item">MISO</span>
+      <span class="logo-item">SERC / Duke</span>
+      <span class="logo-item">ISO-NE</span>
+      <span class="logo-item">CAISO</span>
+      <span class="logo-item">PVsyst</span>
+      <span class="logo-item">SolarEdge API</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── PROBLEM ── -->
+<section class="problem">
+  <div class="section-inner">
+    <div class="section-eyebrow fade-up">The Problem</div>
+    <h2 class="section-title fade-up fade-up-delay-1">Acquiring solar assets is<br><em>slower than it should be.</em></h2>
+    <p class="section-sub fade-up fade-up-delay-2">Every deal runs the same playbook: rebuild the model from scratch, wait weeks for engineering reports, track risks in scattered spreadsheets. SolarLedger replaces all of it.</p>
+    <div class="problem-grid fade-up fade-up-delay-3">
+      <div class="problem-item">
+        <div class="problem-num">$50K</div>
+        <div class="problem-title">Independent Engineering Report</div>
+        <div class="problem-desc">Takes 3–6 weeks to produce. Answers technical questions buyers need answered in days. Cost multiplies with portfolio size.</div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-num">3 wks</div>
+        <div class="problem-title">Model Built From Scratch</div>
+        <div class="problem-desc">Every deal team builds the same DCF / IRR / DSCR model from scratch. No standard template. Outputs are inconsistent and non-comparable across deals.</div>
+      </div>
+      <div class="problem-item">
+        <div class="problem-num">0</div>
+        <div class="problem-title">Post-Close Monitoring Link</div>
+        <div class="problem-desc">Once a deal closes, the underwriting model is abandoned. Actual performance is tracked in a separate system with no link back to original assumptions.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section id="how-it-works">
+  <div class="section-inner">
+    <div class="section-eyebrow fade-up">How It Works</div>
+    <h2 class="section-title fade-up fade-up-delay-1">Six steps from data room<br><em>to investment committee.</em></h2>
+    <div class="steps">
+      <div class="step fade-up">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <h3>Upload Your Data Room</h3>
+          <p>Drop in every deal file — PVsyst reports, PPA agreements, EPC schedules, interconnection docs, debt term sheets, land leases. SolarLedger reads everything automatically.</p>
+          <div class="step-tags"><span class="step-tag">PDF</span><span class="step-tag">Excel</span><span class="step-tag">CSV</span><span class="step-tag">Word</span></div>
+        </div>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <h3>AI Extracts Every Assumption</h3>
+          <p>The AI engine reads each document and maps extracted values directly to the financial model — P50 yield, PPA price, CAPEX line items, debt covenants, ITC status. Flagged in yellow where human review is required.</p>
+          <div class="step-tags"><span class="step-tag">47 assumptions extracted</span><span class="step-tag">97% avg. confidence</span></div>
+        </div>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <h3>Full Financial Model — Instantly</h3>
+          <p>A 35-year institutional model is built automatically: Revenue, OPEX, CAPEX, Debt Schedule, ITC, Returns, Sources & Uses. IRR, NPV, DSCR, LLCR — all calculated and linked. Base / Bull / Bear scenarios included.</p>
+          <div class="step-tags"><span class="step-tag">Levered IRR</span><span class="step-tag">NPV</span><span class="step-tag">DSCR / LLCR</span><span class="step-tag">MOIC</span></div>
+        </div>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <h3>Engineering Diligence & Stage Assessment</h3>
+          <p>Automated Owner's Engineer review: PVsyst accuracy, interconnection risk, Safe Harbor compliance, equipment procurement gaps. Plus a full development stage roadmap — where the project sits today and what needs to happen before RTB.</p>
+          <div class="step-tags"><span class="step-tag">Greenfield → RTB</span><span class="step-tag">Risk register</span><span class="step-tag">ITC compliance</span></div>
+        </div>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">05</div>
+        <div class="step-body">
+          <h3>Natural-Language Analyst Chat</h3>
+          <p>Change any assumption by typing plain English. "Increase O&M by 20% for all NC assets." "Run a bear case where merchant price drops 15%." Every change logged in a full audit trail.</p>
+          <div class="step-tags"><span class="step-tag">Real-time recalc</span><span class="step-tag">Audit trail</span><span class="step-tag">Scenario analysis</span></div>
+        </div>
+      </div>
+      <div class="step fade-up">
+        <div class="step-num">06</div>
+        <div class="step-body">
+          <h3>Committee-Ready Output Package</h3>
+          <p>One click exports the Excel model, investment memo, and PowerPoint deck — all reflecting the final model state with a complete change log. Ready to share with your investment committee.</p>
+          <div class="step-tags"><span class="step-tag">Excel model</span><span class="step-tag">Investment memo</span><span class="step-tag">PowerPoint deck</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section id="features" class="features-bg">
+  <div class="section-inner">
+    <div class="section-eyebrow fade-up">Platform Features</div>
+    <h2 class="section-title fade-up fade-up-delay-1">Everything a solar deal team<br><em>actually needs.</em></h2>
+    <div class="features-grid">
+      <div class="feature-card fade-up">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">AI Document Ingestion</div>
+        <div class="feature-desc">Reads PVsyst reports, PPAs, EPC schedules, interconnection agreements, debt term sheets, and leases. Maps every extracted value to the correct model field automatically.</div>
+      </div>
+      <div class="feature-card fade-up fade-up-delay-1">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Institutional Financial Model</div>
+        <div class="feature-desc">35-year projection built to fund standards. Revenue, OPEX, CAPEX, debt, ITC, and returns — all linked, color-coded, and exportable to Excel. Per-asset assumptions, portfolio consolidation.</div>
+      </div>
+      <div class="feature-card fade-up fade-up-delay-2">
+        <div class="feature-icon">🏗</div>
+        <div class="feature-title">Development Stage Roadmap</div>
+        <div class="feature-desc">Automatically determines where each project sits in the development cycle — Greenfield through RTB Launch — and shows exactly what needs to happen to advance to the next stage.</div>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">🔌</div>
+        <div class="feature-title">Live Production Monitoring</div>
+        <div class="feature-desc">SolarEdge and Enphase API connections feed real-time generation data for operating assets. Actual vs. P50 variance tracked daily. Alerts when performance deviates from the underwriting model.</div>
+      </div>
+      <div class="feature-card fade-up fade-up-delay-1">
+        <div class="feature-icon">⚠️</div>
+        <div class="feature-title">Engineering Risk Register</div>
+        <div class="feature-desc">Automated Owner's Engineer review flags soiling assumptions, inverter model changes, transformer delivery risk, ITC Safe Harbor gaps, and interconnection milestones — with NPV impact estimates.</div>
+      </div>
+      <div class="feature-card fade-up fade-up-delay-2">
+        <div class="feature-icon">💬</div>
+        <div class="feature-title">Analyst Chat Interface</div>
+        <div class="feature-desc">Type plain-English instructions to modify any assumption and rerun the model instantly. Full audit trail logs every change — who changed what, when, and from what value.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="section-eyebrow fade-up">Pricing</div>
+    <h2 class="section-title fade-up fade-up-delay-1">Priced against what<br><em>you're replacing.</em></h2>
+    <p class="section-sub fade-up fade-up-delay-2">A traditional independent engineering report costs $15–50K and takes 4–6 weeks. SolarLedger replaces it in hours, at a fraction of the cost.</p>
+    <div class="pricing-grid">
+      <div class="price-card fade-up">
+        <div class="price-label">Transaction</div>
+        <div class="price-amount">$3,500</div>
+        <div class="price-period">per deal analysis</div>
+        <div class="price-desc">Full analysis for a single asset or portfolio. No subscription required.</div>
+        <div class="price-features">
+          <div class="price-feature"><span class="price-check">✓</span>Document ingestion & AI extraction</div>
+          <div class="price-feature"><span class="price-check">✓</span>Complete 35-year financial model</div>
+          <div class="price-feature"><span class="price-check">✓</span>Engineering diligence module</div>
+          <div class="price-feature"><span class="price-check">✓</span>Excel export + investment memo PDF</div>
+          <div class="price-feature"><span class="price-check">✓</span>PowerPoint deck</div>
+        </div>
+        <a href="https://calendly.com/placeholder" target="_blank" class="btn btn-ghost">Get Started</a>
+      </div>
+      <div class="price-card featured fade-up fade-up-delay-1">
+        <div class="price-label">Analyst</div>
+        <div class="price-amount">$999</div>
+        <div class="price-period">per month</div>
+        <div class="price-desc">For active deal teams running 3–8 transactions per year.</div>
+        <div class="price-features">
+          <div class="price-feature"><span class="price-check">✓</span>Up to 5 active deal analyses</div>
+          <div class="price-feature"><span class="price-check">✓</span>3 analyst seats</div>
+          <div class="price-feature"><span class="price-check">✓</span>All Transaction features</div>
+          <div class="price-feature"><span class="price-check">✓</span>Post-acquisition monitoring (10 assets)</div>
+          <div class="price-feature"><span class="price-check">✓</span>SolarEdge / Enphase API connections</div>
+        </div>
+        <a href="https://calendly.com/placeholder" target="_blank" class="btn btn-gold">Book a Demo</a>
+      </div>
+      <div class="price-card fade-up fade-up-delay-2">
+        <div class="price-label">Fund</div>
+        <div class="price-amount">$2,499</div>
+        <div class="price-period">per month</div>
+        <div class="price-desc">For infrastructure funds and PE firms with active solar pipelines.</div>
+        <div class="price-features">
+          <div class="price-feature"><span class="price-check">✓</span>Unlimited deal analyses</div>
+          <div class="price-feature"><span class="price-check">✓</span>Unlimited analyst seats</div>
+          <div class="price-feature"><span class="price-check">✓</span>Custom branded model template</div>
+          <div class="price-feature"><span class="price-check">✓</span>API access for model data</div>
+          <div class="price-feature"><span class="price-check">✓</span>Unlimited post-acquisition monitoring</div>
+        </div>
+        <a href="https://calendly.com/placeholder" target="_blank" class="btn btn-ghost">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="section-inner">
+    <h2 class="section-title fade-up" style="max-width:600px">Ready to run your next deal<br><em>in hours, not weeks?</em></h2>
+    <p class="section-sub fade-up fade-up-delay-1">Book a 30-minute demo and we'll walk through a live deal analysis using your own data room.</p>
+    <div class="cta-btns fade-up fade-up-delay-2">
+      <a href="https://calendly.com/placeholder" target="_blank" class="btn btn-gold btn-lg">Book a Demo →</a>
+      <a href="login.html" class="btn btn-lg" style="background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15)">Log In</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">Solar<em>Ledger</em></div>
+    <div class="footer-copy">© 2026 SolarLedger. All rights reserved.</div>
+  </div>
+</footer>
+
+<script>
+// Nav scroll effect
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// Intersection observer for fade-up animations
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting) e.target.classList.add('visible');
+  });
+},{threshold:0.12});
+document.querySelectorAll('.fade-up').forEach(el=>observer.observe(el));
+</script>
+</body>
+</html>

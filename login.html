@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarLedger — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0A0F1E;
+  --ink2:#1C2540;
+  --ink3:#3D4F6E;
+  --ink4:#7A8BA8;
+  --gold:#C8973A;
+  --blue:#1560BD;
+  --line:#E2E8F3;
+  --line-dark:#1E2D45;
+  --surface:#F7F9FC;
+  --white:#FFFFFF;
+  --red:#C62828;
+  --serif:'Playfair Display',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --r:8px;
+}
+html,body{height:100%;font-family:var(--sans);background:var(--ink);color:var(--ink);overflow:hidden}
+.page{display:flex;height:100vh}
+
+/* ── LEFT PANEL ── */
+.left{flex:1;background:var(--ink);display:flex;flex-direction:column;justify-content:space-between;padding:40px;position:relative;overflow:hidden}
+.left-bg{position:absolute;inset:0;background:
+  radial-gradient(ellipse 70% 60% at 30% 40%, rgba(21,96,189,0.15) 0%, transparent 60%),
+  radial-gradient(ellipse 50% 40% at 80% 80%, rgba(200,151,58,0.07) 0%, transparent 50%)}
+.left-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse at 50% 50%,black 0%,transparent 100%)}
+.left-content{position:relative;z-index:2;display:flex;flex-direction:column;height:100%;justify-content:space-between}
+.left-logo{font-family:var(--serif);font-size:24px;color:#fff;text-decoration:none}
+.left-logo em{font-style:italic;color:#4A9EF0}
+.left-middle{flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 0}
+.left-eyebrow{font-family:var(--mono);font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:20px}
+.left-headline{font-family:var(--serif);font-size:clamp(28px,3vw,40px);color:#fff;line-height:1.2;letter-spacing:-0.02em;margin-bottom:16px}
+.left-headline em{font-style:italic;color:rgba(255,255,255,.45)}
+.left-sub{font-size:13px;color:rgba(255,255,255,.35);line-height:1.7;max-width:360px;font-weight:300}
+.left-stats{display:flex;gap:32px;margin-top:40px}
+.ls-item{border-left:2px solid rgba(255,255,255,.1);padding-left:14px}
+.ls-val{font-family:var(--mono);font-size:20px;color:#fff;letter-spacing:-0.02em}
+.ls-lbl{font-size:10px;color:rgba(255,255,255,.25);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.left-foot{font-size:10px;color:rgba(255,255,255,.15);font-family:var(--mono)}
+
+/* ── RIGHT PANEL ── */
+.right{width:440px;flex-shrink:0;background:var(--white);display:flex;flex-direction:column;justify-content:center;padding:56px 48px;position:relative}
+.right-logo{display:none;font-family:var(--serif);font-size:20px;color:var(--ink);margin-bottom:40px;text-decoration:none}
+.right-logo em{font-style:italic;color:var(--blue)}
+.login-eyebrow{font-family:var(--mono);font-size:10px;color:var(--ink4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.login-title{font-family:var(--serif);font-size:28px;font-weight:400;color:var(--ink);letter-spacing:-0.02em;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--ink4);margin-bottom:36px;line-height:1.5}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.form-group input{width:100%;font-family:var(--sans);font-size:13px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);outline:none;transition:all .2s}
+.form-group input:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(21,96,189,.08)}
+.form-group input.error{border-color:var(--red);background:#FFF5F5}
+.form-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.remember{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink3);cursor:pointer}
+.remember input[type=checkbox]{accent-color:var(--blue)}
+.forgot{font-size:12px;color:var(--blue);text-decoration:none;transition:opacity .2s}
+.forgot:hover{opacity:.7}
+.btn-login{width:100%;font-family:var(--sans);font-size:14px;font-weight:600;padding:13px;border-radius:var(--r);background:var(--ink);color:#fff;border:none;cursor:pointer;transition:all .2s;letter-spacing:.01em;position:relative;overflow:hidden}
+.btn-login:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(10,15,30,.2)}
+.btn-login:active{transform:translateY(0)}
+.btn-login.loading{pointer-events:none;opacity:.7}
+.btn-login .btn-text{transition:opacity .2s}
+.btn-login .btn-spinner{display:none;position:absolute;inset:0;align-items:center;justify-content:center}
+.btn-login.loading .btn-text{opacity:0}
+.btn-login.loading .btn-spinner{display:flex}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-msg{display:none;margin-top:14px;padding:10px 13px;background:#FFF0F0;border:1px solid #FFCDD2;border-radius:var(--r);font-size:12px;color:var(--red);line-height:1.5}
+.error-msg.show{display:block}
+.divider{display:flex;align-items:center;gap:12px;margin:28px 0;color:var(--ink4);font-size:11px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line)}
+.demo-hint{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:28px}
+.demo-hint-label{font-size:10px;font-weight:600;color:var(--ink4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.demo-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.demo-row:last-child{margin-bottom:0}
+.demo-key{color:var(--ink3)}
+.demo-val{font-family:var(--mono);font-size:11px;color:var(--blue);cursor:pointer;transition:opacity .2s}
+.demo-val:hover{opacity:.7}
+.demo-fill{font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline;margin-top:8px;display:inline-block}
+.login-foot{margin-top:32px;text-align:center;font-size:12px;color:var(--ink4)}
+.login-foot a{color:var(--blue);text-decoration:none}
+.login-foot a:hover{text-decoration:underline}
+
+@media(max-width:760px){
+  .left{display:none}
+  .right{width:100%;padding:40px 24px}
+  .right-logo{display:block}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- LEFT -->
+  <div class="left">
+    <div class="left-bg"></div>
+    <div class="left-grid"></div>
+    <div class="left-content">
+      <a href="index.html" class="left-logo">Solar<em>Ledger</em></a>
+      <div class="left-middle">
+        <div class="left-eyebrow">Solar M&A Platform</div>
+        <h2 class="left-headline">Due diligence at<br>the speed of <em>your pipeline.</em></h2>
+        <p class="left-sub">Upload your data room. Get an institutional financial model, engineering risk review, and investment memo — in hours, not weeks.</p>
+        <div class="left-stats">
+          <div class="ls-item"><div class="ls-val">47</div><div class="ls-lbl">Assumptions extracted</div></div>
+          <div class="ls-item"><div class="ls-val">35yr</div><div class="ls-lbl">Model projection</div></div>
+          <div class="ls-item"><div class="ls-val">&lt;2h</div><div class="ls-lbl">Full analysis</div></div>
+        </div>
+      </div>
+      <div class="left-foot">SolarLedger v2.0 · © 2026</div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <a href="index.html" class="right-logo">Solar<em>Ledger</em></a>
+    <div class="login-eyebrow">Secure Access</div>
+    <h1 class="login-title">Welcome back.</h1>
+    <p class="login-sub">Sign in to your SolarLedger workspace to access your deal analyses and portfolio.</p>
+
+    <!-- Demo credentials hint -->
+    <div class="demo-hint">
+      <div class="demo-hint-label">Demo Credentials</div>
+      <div class="demo-row"><span class="demo-key">Email</span><span class="demo-val" onclick="fillDemo()">demo@solarledger.io</span></div>
+      <div class="demo-row"><span class="demo-key">Password</span><span class="demo-val" onclick="fillDemo()">SolarLedger2026</span></div>
+      <span class="demo-fill" onclick="fillDemo()">↗ Auto-fill credentials</span>
+    </div>
+
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="email" placeholder="you@yourfirm.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="form-row">
+      <label class="remember"><input type="checkbox" checked> Keep me signed in</label>
+      <a href="#" class="forgot">Forgot password?</a>
+    </div>
+
+    <button class="btn-login" id="login-btn" onclick="doLogin()">
+      <span class="btn-text">Sign In →</span>
+      <span class="btn-spinner"><span class="spinner"></span></span>
+    </button>
+
+    <div class="error-msg" id="error-msg">
+      Incorrect email or password. Please try again or use the demo credentials above.
+    </div>
+
+    <div class="login-foot">
+      Don't have access? <a href="https://calendly.com/placeholder" target="_blank">Book a demo →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillDemo() {
+  document.getElementById('email').value = 'demo@solarledger.io';
+  document.getElementById('password').value = 'SolarLedger2026';
+  document.getElementById('email').dispatchEvent(new Event('input'));
+  document.getElementById('password').dispatchEvent(new Event('input'));
+}
+
+function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('login-btn');
+  const errorMsg = document.getElementById('error-msg');
+
+  // Clear previous errors
+  errorMsg.classList.remove('show');
+  document.getElementById('email').classList.remove('error');
+  document.getElementById('password').classList.remove('error');
+
+  // Show loading
+  btn.classList.add('loading');
+
+  setTimeout(() => {
+    btn.classList.remove('loading');
+    if (email === 'demo@solarledger.io' && password === 'SolarLedger2026') {
+      // Success — store session and redirect to app
+      sessionStorage.setItem('sl_auth', '1');
+      sessionStorage.setItem('sl_user', 'Demo User');
+      sessionStorage.setItem('sl_firm', 'Arcadian Infrastructure Partners');
+      window.location.href = 'app.html';
+    } else {
+      // Fail
+      errorMsg.classList.add('show');
+      document.getElementById('email').classList.add('error');
+      document.getElementById('password').classList.add('error');
+    }
+  }, 900);
+}
+</script>
+</body>
+</html>
