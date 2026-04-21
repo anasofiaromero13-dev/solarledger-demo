@@ -923,7 +923,7 @@ const DEALS = {
     opex: {pvo:0,util:120,para:0,uncov:0,tel:25,ins:180,am:60,at:15,lc:80,inv:0,other:50,lease:0},
     opexEsc: {pvo:0,util:.02,para:0,uncov:0,tel:.02,ins:0,am:.02,at:.02,lc:0,inv:0,other:0,lease:0},
     files: [
-      {name:'DG_BESS_Financial_Model_NY_v1.xlsm',fields:'4 sites · Bracero Pecan · Oxford MA · Turners Falls MA · Leominster MA',status:'green',conf:99},
+      {name:'DG_BESS_Financial_Model_NY_v1.xlsm',fields:'4 sites · Site A · Site B · Site C · Site D · NY/MA region',status:'green',conf:99},
       {name:'Battery_Specs_BESS_4Sites.pdf',fields:'Chemistry: LFP · 4hr duration · FMV step-up 20% · COD 2027–2028',status:'green',conf:95},
       {name:'NYISO_Interconnection_Agreements.pdf',fields:'Revenue: Arbitrage + Ancillary services (FR, RR) · Scheduled revenue TBD',status:'amber',conf:78},
       {name:'Debt_Term_Sheet_SOFR_550.pdf',fields:'$19.4M total · SOFR+5.50% · 7yr tenor · DSCR 1.25x covenant',status:'green',conf:97},
@@ -960,7 +960,7 @@ const DEALS = {
       {name:'O&M_Agreements_Sunridge.pdf',fields:'Per-site O&M pricing · Annual escalation 2.0% · Equipment warranties current',status:'green',conf:96},
     ],
     chat: [
-      {trigger:/site|bressi|hanford|esplanade/i,reply:'Site-level breakdown available. Top 5 by capacity: Hanford (3.8MW), Esplanade (1.6MW), BlueOaks (1.5MW), Puente (1.4MW), Boronda (0.9MW).',changes:[]},
+      {trigger:/site|capacity|breakdown/i,reply:'Site-level breakdown available. Top 5 by capacity: Site CA-01 (3.8MW), Site CA-02 (1.6MW), Site CA-03 (1.5MW), Site CA-04 (1.4MW), Site CA-06 (0.9MW).',changes:[]},
       {trigger:/degradation|actual|p50/i,reply:'Actual production 2023–2025 tracking +2.1% above P50. Degradation on curve at 0.40%/yr.',changes:[{f:'P50 vs Actual',from:'Est. only',to:'+2.1% above P50'}]},
       {trigger:/revenue|rate|ppa/i,reply:'Revenue mix: site PPAs + NEM bill credits. Weighted avg effective rate $52/MWh. Escalation varies per site.',changes:[]},
     ]
@@ -1063,6 +1063,7 @@ document.addEventListener('click',e=>{
 function switchDeal(dealKey, optionEl) {
   curDeal = dealKey;
   const d = DEALS[dealKey];
+  if (!d) return;
   document.getElementById('sidebar-deal-name').textContent = d.name;
   document.getElementById('sidebar-deal-meta').textContent = d.meta;
   document.querySelectorAll('.deal-option').forEach(el=>el.classList.remove('active'));
@@ -1072,7 +1073,12 @@ function switchDeal(dealKey, optionEl) {
   // Reset chat
   document.getElementById('chat-msgs').innerHTML = '';
   document.getElementById('audit-trail').innerHTML = '<div class="audit-item"><span class="audit-ts">AI · init</span><div><div><span class="audit-field">Model initialized</span> — documents parsed, assumptions extracted</div></div></div>';
-  const cur = SCREENS.find(s=>document.getElementById('s-'+s).classList.contains('active'));
+  // Re-render current screen with new deal — check all possible screens
+  const allScreens = ['dashboard','upload','assumptions','model','engineering','chat','memo','portfolio'];
+  const cur = allScreens.find(s => {
+    const el = document.getElementById('s-'+s);
+    return el && el.classList.contains('active');
+  });
   if (cur) go(cur);
   showNotif(`Switched to: ${d.name}`);
 }
@@ -1112,8 +1118,11 @@ function renderUpload() {
 // ─── ASSUMPTIONS SCREEN ───────────────────────────────────────────────────────
 function renderAssumptions() {
   const d = DEALS[curDeal];
+  if (!d) return;
   let html = '';
+
   if (curDeal === 'apex') {
+    // Apex Solar Portfolio — 82 MWdc utility-scale development asset
     html = `
     <div class="two-col mb16">
       <div class="card">
@@ -1122,11 +1131,12 @@ function renderAssumptions() {
           <tr><td>MW dc (Nameplate)</td><td>MWdc</td><td><input class="asmp-input" value="${d.mwdc}"></td></tr>
           <tr><td>MW ac (POI)</td><td>MWac</td><td><input class="asmp-input" value="${d.mwac}"></td></tr>
           <tr><td>DC / AC Ratio</td><td>x</td><td><input class="asmp-input" value="${d.dcac}" readonly></td></tr>
-          <tr><td>Annual Yield (P50)</td><td>kWh/kWp</td><td><input class="asmp-input" value="${d.yield}"></td></tr>
+          <tr><td>Annual Yield (P50)</td><td>kWh/kWp</td><td><input class="asmp-input" value="${d.yield.toLocaleString()}"></td></tr>
           <tr><td>Availability Factor</td><td>%</td><td><input class="asmp-input" value="${(d.avail*100).toFixed(1)}%"></td></tr>
           <tr><td>Annual Degradation</td><td>%/yr</td><td><input class="asmp-input" value="${(d.degrad*100).toFixed(2)}%"></td></tr>
           <tr><td>COD Date</td><td></td><td><input class="asmp-input" value="${d.cod}" readonly></td></tr>
           <tr><td>Asset Life</td><td>years</td><td><input class="asmp-input" value="${d.life}"></td></tr>
+          <tr><td>Curtailment</td><td>%</td><td><input class="asmp-input" value="${(d.curtail*100).toFixed(1)}%"></td></tr>
         </tbody></table>
       </div>
       <div class="card">
@@ -1137,7 +1147,7 @@ function renderAssumptions() {
           <tr><td>PPA Tenor</td><td>years</td><td><input class="asmp-input" value="${d.ppaTenor}"></td></tr>
           <tr><td>Merchant Price (Post-PPA)</td><td>$/MWh</td><td><input class="asmp-input flagged" value="${d.merch.toFixed(2)}" title="Flagged — Aurora consensus $65; seller assumed $70"></td></tr>
           <tr><td>Merchant Escalation</td><td>%/yr</td><td><input class="asmp-input flagged" value="${(d.merchEsc*100).toFixed(1)}%"></td></tr>
-          <tr><td>Curtailment</td><td>%</td><td><input class="asmp-input" value="${(d.curtail*100).toFixed(1)}%"></td></tr>
+          <tr><td>Grid Operator</td><td></td><td><input class="asmp-input" value="${d.gridOp}" readonly></td></tr>
         </tbody></table>
       </div>
     </div>
@@ -1151,7 +1161,7 @@ function renderAssumptions() {
           <tr><td>Substation / MV</td><td><input class="asmp-input" value="7,038"></td><td><span class="asmp-formula">$0.086</span></td></tr>
           <tr><td>Interconnection</td><td><input class="asmp-input" value="3,080"></td><td><span class="asmp-formula">$0.038</span></td></tr>
           <tr><td>Contingency (3.5%)</td><td><input class="asmp-input flagged" value="3,130"></td><td><span class="asmp-formula">$0.038</span></td></tr>
-          <tr style="background:var(--blue-pale)"><td style="font-weight:700">Total Unlevered CapEx</td><td style="text-align:right;font-family:var(--mono);font-weight:700">110,432</td><td><span class="asmp-formula" style="color:var(--green)">→Dashboard</span></td></tr>
+          <tr style="background:var(--blue-pale)"><td style="font-weight:700">Total Unlevered CapEx</td><td style="text-align:right;font-family:var(--mono);font-weight:700">110,432</td><td><span class="asmp-formula" style="color:var(--green)">$1.346/Wdc</span></td></tr>
         </tbody></table>
       </div>
       <div class="card">
@@ -1168,25 +1178,32 @@ function renderAssumptions() {
         </tbody></table>
       </div>
     </div>`;
+
   } else if (curDeal === 'clearwater') {
+    // Clearwater Solar — ~30 MWdc operating asset, ISO-NE
     html = `
     <div class="two-col mb16">
       <div class="card">
         <div class="card-hd">A. Operating Parameters</div>
         <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
-          <tr><td>Yield</td><td>hrs/yr</td><td><input class="asmp-input" value="1,906.3"></td></tr>
-          <tr><td>Availability</td><td>%</td><td><input class="asmp-input" value="98.0%"></td></tr>
-          <tr><td>Degradation</td><td>%/yr</td><td><input class="asmp-input" value="0.45%"></td></tr>
+          <tr><td>Capacity (MWdc)</td><td>MWdc</td><td><input class="asmp-input" value="${d.mwdc}"></td></tr>
+          <tr><td>Annual Yield (P50)</td><td>hrs/yr</td><td><input class="asmp-input" value="1,906"></td></tr>
+          <tr><td>Availability Factor</td><td>%</td><td><input class="asmp-input" value="${(d.avail*100).toFixed(1)}%"></td></tr>
+          <tr><td>Annual Degradation</td><td>%/yr</td><td><input class="asmp-input" value="${(d.degrad*100).toFixed(2)}%"></td></tr>
           <tr><td>Availability Reduction (18mo)</td><td>%</td><td><input class="asmp-input flagged" value="3.0%"></td></tr>
-          <tr><td>Asset Life</td><td>years</td><td><input class="asmp-input" value="35"></td></tr>
+          <tr><td>Grid Operator</td><td></td><td><input class="asmp-input" value="${d.gridOp}" readonly></td></tr>
+          <tr><td>Asset Life</td><td>years</td><td><input class="asmp-input" value="${d.life}"></td></tr>
+          <tr><td>Status</td><td></td><td><input class="asmp-input" value="Operating" readonly></td></tr>
         </tbody></table>
       </div>
       <div class="card">
         <div class="card-hd">B. Revenue Curves</div>
         <table class="asmp-table"><thead><tr><th>Revenue Stream</th><th>Curve</th><th>Sensitivity</th></tr></thead><tbody>
-          <tr><td>ATC (Energy)</td><td><span class="asmp-formula">SE - Oren base</span></td><td><input class="asmp-input" value="100%"></td></tr>
-          <tr><td>REC</td><td><span class="asmp-formula">SE - WM</span></td><td><input class="asmp-input flagged" value="100%"></td></tr>
-          <tr><td>Capacity (ELCC)</td><td><span class="asmp-formula">SE - WM</span></td><td><input class="asmp-input" value="100%"></td></tr>
+          <tr><td>ATC (Energy)</td><td><span class="asmp-formula">Broker Base Case</span></td><td><input class="asmp-input" value="100%"></td></tr>
+          <tr><td>REC</td><td><span class="asmp-formula">Market Consensus</span></td><td><input class="asmp-input flagged" value="100%"></td></tr>
+          <tr><td>Capacity (ELCC)</td><td><span class="asmp-formula">Market Consensus</span></td><td><input class="asmp-input" value="100%"></td></tr>
+          <tr><td>Merchant Escalation</td><td>%/yr</td><td><input class="asmp-input" value="${(d.merchEsc*100).toFixed(1)}%"></td></tr>
+          <tr><td>Curtailment</td><td>%</td><td><input class="asmp-input" value="${(d.curtail*100).toFixed(1)}%"></td></tr>
           <tr><td>Basis Adjustment</td><td>$/MWh</td><td><input class="asmp-input" value="$0.00"></td></tr>
         </tbody></table>
       </div>
@@ -1195,12 +1212,12 @@ function renderAssumptions() {
       <div class="card">
         <div class="card-hd">C. OPEX Assumptions</div>
         <table class="asmp-table"><thead><tr><th>Line Item</th><th style="text-align:right">Value</th><th style="text-align:right">Unit</th></tr></thead><tbody>
-          <tr><td>Insurance</td><td><input class="asmp-input" value="57.2"></td><td><span class="asmp-formula">$k/month</span></td></tr>
-          <tr><td>Asset Management</td><td><input class="asmp-input" value="0.80"></td><td><span class="asmp-formula">$/kWdc/yr</span></td></tr>
-          <tr><td>AM Escalation</td><td><input class="asmp-input" value="2.0%"></td><td><span class="asmp-formula">%/yr</span></td></tr>
+          <tr><td>Insurance</td><td><input class="asmp-input" value="${d.opex.ins}"></td><td><span class="asmp-formula">$k/yr</span></td></tr>
+          <tr><td>PV O&M</td><td><input class="asmp-input" value="${d.opex.pvo}"></td><td><span class="asmp-formula">$k/yr</span></td></tr>
+          <tr><td>Asset Management</td><td><input class="asmp-input" value="${d.opex.am}"></td><td><span class="asmp-formula">$k/yr</span></td></tr>
           <tr><td>Uncovered O&M (Yr 1–13)</td><td><input class="asmp-input" value="0.80"></td><td><span class="asmp-formula">$/kWdc</span></td></tr>
-          <tr><td>Uncovered O&M (Yr 14+)</td><td><input class="asmp-input flagged" value="2.50"></td><td><span class="asmp-formula">$/kWdc</span></td></tr>
-          <tr><td>Other OPEX Sensitivity</td><td><input class="asmp-input" value="5.0%"></td><td><span class="asmp-formula">% of OPEX</span></td></tr>
+          <tr><td>Uncovered O&M (Yr 14+)</td><td><input class="asmp-input flagged" value="2.50"></td><td><span class="asmp-formula">$/kWdc (flagged)</span></td></tr>
+          <tr><td>OPEX Escalation</td><td><input class="asmp-input" value="2.0%"></td><td><span class="asmp-formula">%/yr</span></td></tr>
         </tbody></table>
       </div>
       <div class="card">
@@ -1209,79 +1226,119 @@ function renderAssumptions() {
           <tr><td>First Replacement</td><td><input class="asmp-input" value="Year 7"></td><td><input class="asmp-input" value="Year 16"></td></tr>
           <tr><td>Second Replacement</td><td><input class="asmp-input" value="Year 25"></td><td><input class="asmp-input" value="Year 34"></td></tr>
           <tr><td>O&M Flip Year</td><td colspan="2"><input class="asmp-input" value="Year 14"></td></tr>
+          <tr><td>Annual Reserve Funding</td><td colspan="2"><input class="asmp-input flagged" value="TBD — verify balance"></td></tr>
         </tbody></table>
       </div>
     </div>`;
+
   } else if (curDeal === 'bess') {
+    // Project Genesis — 4-site BESS portfolio, NY/MA
     html = `
     <div class="two-col mb16">
       <div class="card">
         <div class="card-hd">A. BESS Portfolio — 4 Sites</div>
-        <table class="asmp-table"><thead><tr><th>Site</th><th>MWh</th><th>COD</th><th>Loan ($k)</th></tr></thead><tbody>
-          <tr><td>Site 17 (Bracero Pecan)</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="5,960"></td></tr>
-          <tr><td>21 Jungle Road, Leominster</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q3 2028</span></td><td><input class="asmp-input" value="3,630"></td></tr>
-          <tr><td>101 Sutton Ave, Oxford</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="3,610"></td></tr>
-          <tr><td>130 Turnpike Rd, Turners Falls</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q1 2028</span></td><td><input class="asmp-input" value="6,180"></td></tr>
+        <table class="asmp-table"><thead><tr><th>Site</th><th>Capacity</th><th>COD</th><th>Loan ($k)</th></tr></thead><tbody>
+          <tr><td>Site A — Northeast</td><td><input class="asmp-input" value="TBD MWh"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="5,960"></td></tr>
+          <tr><td>Site B — Northeast</td><td><input class="asmp-input" value="TBD MWh"></td><td><span class="asmp-formula">Q3 2028</span></td><td><input class="asmp-input" value="3,630"></td></tr>
+          <tr><td>Site C — Mid-Atlantic</td><td><input class="asmp-input" value="TBD MWh"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="3,610"></td></tr>
+          <tr><td>Site D — Northeast</td><td><input class="asmp-input" value="TBD MWh"></td><td><span class="asmp-formula">Q1 2028</span></td><td><input class="asmp-input" value="6,180"></td></tr>
           <tr style="background:var(--blue-pale)"><td style="font-weight:700">Portfolio Total</td><td colspan="2" style="font-family:var(--mono);font-weight:700;text-align:right">TBD MWh</td><td style="font-family:var(--mono);font-weight:700;text-align:right">19,380</td></tr>
         </tbody></table>
       </div>
       <div class="card">
-        <div class="card-hd">B. Capital Structure (Per Site Avg)</div>
+        <div class="card-hd">B. Capital Structure</div>
         <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Total CapEx</td><td>$'000</td><td><input class="asmp-input" value="${d.capex.toLocaleString()}"></td></tr>
           <tr><td>Interest Rate</td><td></td><td><input class="asmp-input" value="SOFR+5.50%"></td></tr>
-          <tr><td>Term Loan Tenor</td><td>years</td><td><input class="asmp-input" value="7"></td></tr>
-          <tr><td>TRABL Size (Total)</td><td>$'000</td><td><input class="asmp-input" value="14,814"></td></tr>
+          <tr><td>Term Loan Tenor</td><td>years</td><td><input class="asmp-input" value="${d.tenor}"></td></tr>
+          <tr><td>DSCR Covenant</td><td>x</td><td><input class="asmp-input" value="1.25x"></td></tr>
           <tr><td>ITC Base Rate</td><td>%</td><td><input class="asmp-input" value="30%"></td></tr>
           <tr><td>Domestic Content Adder</td><td>%</td><td><input class="asmp-input" value="10%"></td></tr>
-          <tr><td>Total ITC</td><td>%</td><td><input class="asmp-input" value="40%"></td></tr>
+          <tr><td>Total ITC</td><td>%</td><td><input class="asmp-input" value="${(d.itc*100).toFixed(0)}%"></td></tr>
           <tr><td>FMV Step-Up</td><td>%</td><td><input class="asmp-input" value="20%"></td></tr>
         </tbody></table>
       </div>
     </div>
     <div class="card mb16">
-      <div class="card-hd">C. Revenue Assumptions — BESS <span class="badge badge-amber">Revenue TBD — Pending IA</span></div>
-      <table class="asmp-table"><thead><tr><th>Revenue Stream</th><th>Status</th><th style="text-align:right">Avg ($/kW-mo)</th></tr></thead><tbody>
-        <tr><td>Arbitrage (Energy)</td><td><span class="badge badge-amber">Pending IA</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
-        <tr><td>Frequency Regulation (FR)</td><td><span class="badge badge-amber">Pending</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
-        <tr><td>Spinning Reserve (RR)</td><td><span class="badge badge-amber">Pending</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
-        <tr><td>Scheduled Revenue (Contracted)</td><td><span class="badge badge-red">Not Confirmed</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
+      <div class="card-hd">C. Revenue Assumptions — BESS <span class="badge badge-red">Revenue TBD — IA Not Executed</span></div>
+      <table class="asmp-table"><thead><tr><th>Revenue Stream</th><th>Market</th><th>Status</th><th style="text-align:right">Avg ($/kW-mo)</th></tr></thead><tbody>
+        <tr><td>Arbitrage (Energy)</td><td>NYISO / ISO-NE</td><td><span class="badge badge-amber">Pending IA</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
+        <tr><td>Frequency Regulation (FR)</td><td>NYISO / ISO-NE</td><td><span class="badge badge-amber">Pending</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
+        <tr><td>Spinning Reserve (RR)</td><td>NYISO / ISO-NE</td><td><span class="badge badge-amber">Pending</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
+        <tr><td>Scheduled Revenue (Contracted)</td><td>—</td><td><span class="badge badge-red">Not Confirmed</span></td><td><input class="asmp-input flagged" value="TBD"></td></tr>
       </tbody></table>
+    </div>
+    <div class="card mb16">
+      <div class="card-hd">D. Technical Parameters — Battery</div>
+      <div class="two-col">
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Battery Chemistry</td><td><input class="asmp-input" value="LFP" readonly></td></tr>
+          <tr><td>Duration</td><td><input class="asmp-input" value="4 hours" readonly></td></tr>
+          <tr><td>Annual Degradation</td><td><input class="asmp-input" value="${(d.degrad*100).toFixed(1)}%/yr"></td></tr>
+        </tbody></table>
+        <table class="asmp-table"><thead><tr><th>Parameter</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Asset Life</td><td><input class="asmp-input" value="${d.life} years"></td></tr>
+          <tr><td>Availability</td><td><input class="asmp-input" value="${(d.avail*100).toFixed(1)}%"></td></tr>
+          <tr><td>Grid Operators</td><td><input class="asmp-input" value="${d.gridOp}" readonly></td></tr>
+        </tbody></table>
+      </div>
     </div>`;
+
   } else if (curDeal === 'sunridge') {
+    // Sunridge C&I Portfolio — 27-site operating fleet, California
     html = `
     <div class="card mb16">
       <div class="card-hd">A. Portfolio Technical Parameters</div>
       <div class="two-col">
         <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
-          <tr><td>Total Portfolio Capacity</td><td>kW</td><td><input class="asmp-input" value="20,182"></td></tr>
+          <tr><td>Total Portfolio Capacity</td><td>kWdc</td><td><input class="asmp-input" value="20,182"></td></tr>
           <tr><td>Number of Sites</td><td>#</td><td><input class="asmp-input" value="27"></td></tr>
-          <tr><td>Availability Factor</td><td>%</td><td><input class="asmp-input" value="98.5%"></td></tr>
-          <tr><td>Annual Degradation</td><td>%/yr</td><td><input class="asmp-input" value="0.40%"></td></tr>
+          <tr><td>Availability Factor</td><td>%</td><td><input class="asmp-input" value="${(d.avail*100).toFixed(1)}%"></td></tr>
+          <tr><td>Annual Degradation</td><td>%/yr</td><td><input class="asmp-input" value="${(d.degrad*100).toFixed(2)}%"></td></tr>
         </tbody></table>
         <table class="asmp-table"><thead><tr><th>Parameter</th><th>Unit</th><th style="text-align:right">Value</th></tr></thead><tbody>
-          <tr><td>Location</td><td></td><td><input class="asmp-input" value="California"></td></tr>
-          <tr><td>Grid Operator</td><td></td><td><input class="asmp-input" value="CAISO"></td></tr>
-          <tr><td>Revenue Start</td><td>year</td><td><input class="asmp-input" value="2025"></td></tr>
-          <tr><td>Model Horizon</td><td>years</td><td><input class="asmp-input" value="35+"></td></tr>
+          <tr><td>Grid Operator</td><td></td><td><input class="asmp-input" value="${d.gridOp}" readonly></td></tr>
+          <tr><td>Revenue Start</td><td>year</td><td><input class="asmp-input" value="2023"></td></tr>
+          <tr><td>Model Horizon</td><td>years</td><td><input class="asmp-input" value="${d.life}+"></td></tr>
+          <tr><td>Actual vs P50 (YTD)</td><td></td><td><input class="asmp-input" value="+2.1%" readonly></td></tr>
         </tbody></table>
       </div>
     </div>
     <div class="card mb16">
-      <div class="card-hd">B. Top 10 Sites by Capacity</div>
-      <table class="asmp-table"><thead><tr><th>Site</th><th style="text-align:right">kW</th><th>Lease End</th><th>Revenue Escalation</th></tr></thead><tbody>
-        <tr><td>Hanford</td><td style="text-align:right;font-family:var(--mono)">3,804</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
-        <tr><td>Esplanade</td><td style="text-align:right;font-family:var(--mono)">1,557</td><td><input class="asmp-input" value="2061"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>BlueOaks</td><td style="text-align:right;font-family:var(--mono)">1,530</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>Puente</td><td style="text-align:right;font-family:var(--mono)">1,428</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>Palmdale</td><td style="text-align:right;font-family:var(--mono)">1,051</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>Boronda</td><td style="text-align:right;font-family:var(--mono)">900</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>SanDimas</td><td style="text-align:right;font-family:var(--mono)">576</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
-        <tr><td>Orland</td><td style="text-align:right;font-family:var(--mono)">580</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
-        <tr><td>Colusa</td><td style="text-align:right;font-family:var(--mono)">570</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
-        <tr><td>Clovis</td><td style="text-align:right;font-family:var(--mono)">480</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+      <div class="card-hd">B. Top 10 Sites by Capacity <span style="font-size:10px;color:var(--text3);font-weight:400">(generic names for demo)</span></div>
+      <table class="asmp-table"><thead><tr><th>Site</th><th style="text-align:right">kW</th><th>Lease End</th><th>Revenue Type</th><th>Escalation</th></tr></thead><tbody>
+        <tr><td>Site CA-01</td><td style="text-align:right;font-family:var(--mono)">3,804</td><td><input class="asmp-input" value="2059"></td><td><span class="asmp-formula">PPA</span></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Site CA-02</td><td style="text-align:right;font-family:var(--mono)">1,557</td><td><input class="asmp-input" value="2061"></td><td><span class="asmp-formula">NEM</span></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-03</td><td style="text-align:right;font-family:var(--mono)">1,530</td><td><input class="asmp-input" value="2062"></td><td><span class="asmp-formula">NEM</span></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-04</td><td style="text-align:right;font-family:var(--mono)">1,428</td><td><input class="asmp-input" value="2062"></td><td><span class="asmp-formula">PPA</span></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-05</td><td style="text-align:right;font-family:var(--mono)">1,051</td><td><input class="asmp-input" value="2062"></td><td><span class="asmp-formula">NEM</span></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-06</td><td style="text-align:right;font-family:var(--mono)">900</td><td><input class="asmp-input" value="2062"></td><td><span class="asmp-formula">NEM</span></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-07</td><td style="text-align:right;font-family:var(--mono)">580</td><td><input class="asmp-input" value="2059"></td><td><span class="asmp-formula">PPA</span></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Site CA-08</td><td style="text-align:right;font-family:var(--mono)">576</td><td><input class="asmp-input" value="2059"></td><td><span class="asmp-formula">PPA</span></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Site CA-09</td><td style="text-align:right;font-family:var(--mono)">570</td><td><input class="asmp-input" value="2059"></td><td><span class="asmp-formula">NEM</span></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Site CA-10</td><td style="text-align:right;font-family:var(--mono)">480</td><td><input class="asmp-input" value="2059"></td><td><span class="asmp-formula">NEM</span></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr style="background:var(--blue-pale)"><td style="font-weight:700">Top 10 Subtotal</td><td style="text-align:right;font-family:var(--mono);font-weight:700">12,476</td><td colspan="3" style="font-family:var(--mono);font-size:10px;color:var(--text3)">+ 17 additional sites (7,706 kW)</td></tr>
       </tbody></table>
+    </div>
+    <div class="card mb16">
+      <div class="card-hd">C. Revenue & OPEX Summary</div>
+      <div class="two-col">
+        <table class="asmp-table"><thead><tr><th>Revenue Parameter</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>Effective Avg Rate (Yr 1)</td><td><input class="asmp-input" value="~$52/MWh"></td></tr>
+          <tr><td>Revenue Mix</td><td><input class="asmp-input" value="PPA + NEM Credits" readonly></td></tr>
+          <tr><td>Escalation Range</td><td><input class="asmp-input" value="0–2.5%/yr per site"></td></tr>
+          <tr><td>Nearest Contract Expiry</td><td><input class="asmp-input" value="2059 (5+ yrs out)" readonly></td></tr>
+        </tbody></table>
+        <table class="asmp-table"><thead><tr><th>OPEX Parameter</th><th style="text-align:right">Value</th></tr></thead><tbody>
+          <tr><td>PV O&M (base)</td><td><input class="asmp-input" value="${d.opex.pvo} $k/yr"></td></tr>
+          <tr><td>Insurance</td><td><input class="asmp-input" value="${d.opex.ins} $k/yr"></td></tr>
+          <tr><td>Asset Management</td><td><input class="asmp-input" value="${d.opex.am} $k/yr"></td></tr>
+          <tr><td>OPEX Escalation</td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        </tbody></table>
+      </div>
     </div>`;
   }
+
   document.getElementById('assumptions-content').innerHTML = html;
 }
 
