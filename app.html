@@ -923,7 +923,7 @@ const DEALS = {
     opex: {pvo:0,util:120,para:0,uncov:0,tel:25,ins:180,am:60,at:15,lc:80,inv:0,other:50,lease:0},
     opexEsc: {pvo:0,util:.02,para:0,uncov:0,tel:.02,ins:0,am:.02,at:.02,lc:0,inv:0,other:0,lease:0},
     files: [
-      {name:'DG_BESS_Financial_Model_NY_v1.xlsm',fields:'4 sites · Bracero Pecan · Oxford MA · Turners Falls MA · Leominster MA',status:'green',conf:99},
+      {name:'DG_BESS_Financial_Model_NY_v1.xlsm',fields:'4 sites · Site A — Northeast · Site C — Mid-Atlantic · Site D — Northeast · Site B — Northeast',status:'green',conf:99},
       {name:'Battery_Specs_BESS_4Sites.pdf',fields:'Chemistry: LFP · 4hr duration · FMV step-up 20% · COD 2027–2028',status:'green',conf:95},
       {name:'NYISO_Interconnection_Agreements.pdf',fields:'Revenue: Arbitrage + Ancillary services (FR, RR) · Scheduled revenue TBD',status:'amber',conf:78},
       {name:'Debt_Term_Sheet_SOFR_550.pdf',fields:'$19.4M total · SOFR+5.50% · 7yr tenor · DSCR 1.25x covenant',status:'green',conf:97},
@@ -960,7 +960,7 @@ const DEALS = {
       {name:'O&M_Agreements_Sunridge.pdf',fields:'Per-site O&M pricing · Annual escalation 2.0% · Equipment warranties current',status:'green',conf:96},
     ],
     chat: [
-      {trigger:/site|bressi|hanford|esplanade/i,reply:'Site-level breakdown available. Top 5 by capacity: Hanford (3.8MW), Esplanade (1.6MW), BlueOaks (1.5MW), Puente (1.4MW), Boronda (0.9MW).',changes:[]},
+      {trigger:/site|bressi|Site CA-01|Site CA-02/i,reply:'Site-level breakdown available. Top 5 by capacity: Site CA-01 (3.8MW), Site CA-02 (1.6MW), Site CA-03 (1.5MW), Site CA-04 (1.4MW), Site CA-06 (0.9MW).',changes:[]},
       {trigger:/degradation|actual|p50/i,reply:'Actual production 2023–2025 tracking +2.1% above P50. Degradation on curve at 0.40%/yr.',changes:[{f:'P50 vs Actual',from:'Est. only',to:'+2.1% above P50'}]},
       {trigger:/revenue|rate|ppa/i,reply:'Revenue mix: site PPAs + NEM bill credits. Weighted avg effective rate $52/MWh. Escalation varies per site.',changes:[]},
     ]
@@ -1072,7 +1072,7 @@ function switchDeal(dealKey, optionEl) {
   // Reset chat
   document.getElementById('chat-msgs').innerHTML = '';
   document.getElementById('audit-trail').innerHTML = '<div class="audit-item"><span class="audit-ts">AI · init</span><div><div><span class="audit-field">Model initialized</span> — documents parsed, assumptions extracted</div></div></div>';
-  const cur = SCREENS.find(s=>document.getElementById('s-'+s).classList.contains('active'));
+  const allScreens = ['dashboard','upload','assumptions','model','engineering','chat','memo','portfolio']; const cur = allScreens.find(s => { const el = document.getElementById('s-'+s); return el && el.classList.contains('active'); });
   if (cur) go(cur);
   showNotif(`Switched to: ${d.name}`);
 }
@@ -1218,10 +1218,10 @@ function renderAssumptions() {
       <div class="card">
         <div class="card-hd">A. BESS Portfolio — 4 Sites</div>
         <table class="asmp-table"><thead><tr><th>Site</th><th>MWh</th><th>COD</th><th>Loan ($k)</th></tr></thead><tbody>
-          <tr><td>Site 17 (Bracero Pecan)</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="5,960"></td></tr>
-          <tr><td>21 Jungle Road, Leominster</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q3 2028</span></td><td><input class="asmp-input" value="3,630"></td></tr>
-          <tr><td>101 Sutton Ave, Oxford</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="3,610"></td></tr>
-          <tr><td>130 Turnpike Rd, Turners Falls</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q1 2028</span></td><td><input class="asmp-input" value="6,180"></td></tr>
+          <tr><td>Site A — Northeast</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="5,960"></td></tr>
+          <tr><td>Site B — Northeast</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q3 2028</span></td><td><input class="asmp-input" value="3,630"></td></tr>
+          <tr><td>Site C — Mid-Atlantic</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q2 2028</span></td><td><input class="asmp-input" value="3,610"></td></tr>
+          <tr><td>Site D — Northeast</td><td><input class="asmp-input" value="TBD"></td><td><span class="asmp-formula">Q1 2028</span></td><td><input class="asmp-input" value="6,180"></td></tr>
           <tr style="background:var(--blue-pale)"><td style="font-weight:700">Portfolio Total</td><td colspan="2" style="font-family:var(--mono);font-weight:700;text-align:right">TBD MWh</td><td style="font-family:var(--mono);font-weight:700;text-align:right">19,380</td></tr>
         </tbody></table>
       </div>
@@ -1269,16 +1269,16 @@ function renderAssumptions() {
     <div class="card mb16">
       <div class="card-hd">B. Top 10 Sites by Capacity</div>
       <table class="asmp-table"><thead><tr><th>Site</th><th style="text-align:right">kW</th><th>Lease End</th><th>Revenue Escalation</th></tr></thead><tbody>
-        <tr><td>Hanford</td><td style="text-align:right;font-family:var(--mono)">3,804</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
-        <tr><td>Esplanade</td><td style="text-align:right;font-family:var(--mono)">1,557</td><td><input class="asmp-input" value="2061"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>BlueOaks</td><td style="text-align:right;font-family:var(--mono)">1,530</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>Puente</td><td style="text-align:right;font-family:var(--mono)">1,428</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>Palmdale</td><td style="text-align:right;font-family:var(--mono)">1,051</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>Boronda</td><td style="text-align:right;font-family:var(--mono)">900</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
-        <tr><td>SanDimas</td><td style="text-align:right;font-family:var(--mono)">576</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
-        <tr><td>Orland</td><td style="text-align:right;font-family:var(--mono)">580</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
-        <tr><td>Colusa</td><td style="text-align:right;font-family:var(--mono)">570</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
-        <tr><td>Clovis</td><td style="text-align:right;font-family:var(--mono)">480</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-01</td><td style="text-align:right;font-family:var(--mono)">3,804</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Site CA-02</td><td style="text-align:right;font-family:var(--mono)">1,557</td><td><input class="asmp-input" value="2061"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-03</td><td style="text-align:right;font-family:var(--mono)">1,530</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-04</td><td style="text-align:right;font-family:var(--mono)">1,428</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-05</td><td style="text-align:right;font-family:var(--mono)">1,051</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-06</td><td style="text-align:right;font-family:var(--mono)">900</td><td><input class="asmp-input" value="2062"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
+        <tr><td>Site CA-07</td><td style="text-align:right;font-family:var(--mono)">576</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Site CA-08</td><td style="text-align:right;font-family:var(--mono)">580</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Site CA-09</td><td style="text-align:right;font-family:var(--mono)">570</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="Varies"></td></tr>
+        <tr><td>Site CA-10</td><td style="text-align:right;font-family:var(--mono)">480</td><td><input class="asmp-input" value="2059"></td><td><input class="asmp-input" value="2.0%/yr"></td></tr>
       </tbody></table>
     </div>`;
   }
